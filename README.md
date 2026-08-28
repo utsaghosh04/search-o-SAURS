@@ -53,6 +53,7 @@
 - 🔍 [**Boolean Search Engine**](./IR_P1/search-o-SAURS_search.py)
 - 🗂️ [**Inverted Index**](./IR_P1/search-o-SAURS_indexer.py)
 - 🔬 [**NLP Preprocessor**](./IR_P1/search-o-SAURS_preprocess.py)
+- 📊 [**Query Results Log**](./IR_P1/all_results.txt)
 
 ---
 

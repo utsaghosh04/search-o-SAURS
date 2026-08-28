@@ -87,7 +87,7 @@ IR_P1/
 ├── 🗃️  search-o-SAURS_processed.all    ← OUTPUT: Preprocessed token file
 ├── 📇 search-o-SAURS_cran.index        ← OUTPUT: Inverted index file
 │
-└── 📋 results_and.txt                  ← OUTPUT: Sample AND query results
+└── 📋 all_results.txt                  ← OUTPUT: Unified incremental query log
 ```
 
 ---
@@ -254,13 +254,13 @@ This reads `search-o-SAURS_processed.all` and outputs `search-o-SAURS_cran.index
 
 ```bash
 # AND query
-python3 search-o-SAURS_search.py "aerodynamic AND experimental" results_and.txt
+python3 search-o-SAURS_search.py "aerodynamic AND experimental" all_results.txt
 
 # OR query
-python3 search-o-SAURS_search.py "boundary OR layer" results_or.txt
+python3 search-o-SAURS_search.py "boundary OR layer" all_results.txt
 
 # With a custom index file path (optional 3rd argument)
-python3 search-o-SAURS_search.py "flow AND turbulent" results.txt path/to/my.index
+python3 search-o-SAURS_search.py "flow AND turbulent" all_results.txt path/to/my.index
 ```
 
 #### Usage
@@ -317,7 +317,7 @@ python3 search-o-SAURS_search.py "<Term1> <AND|OR> <Term2>" <output_file> [index
 **Query: `aerodynamic AND experimental`**
 
 Matched **49 documents**, including:
-`1, 11, 29, 52, 137, 142, 202, 203, 216, 225 ...` _(see `results_and.txt` for full list)_
+`1, 11, 29, 52, 137, 142, 202, 203, 216, 225 ...` _(see `all_results.txt` for full log)_
 
 ---
 
