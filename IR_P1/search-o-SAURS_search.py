@@ -1,6 +1,8 @@
 import sys
 import os
 import re
+import time
+from datetime import datetime
 from porter import PorterStemmer
 
 def load_index(filepath):
@@ -147,22 +149,29 @@ def main():
     print(f"Postings for '{term2}' (size {len(L2)}): {L2[:10]}..." if len(L2) > 10 else f"Postings for '{term2}' (size {len(L2)}): {L2}")
     
     # Perform Search
+    start_time = time.time()
+    
     if operator == 'AND':
         results = intersect_postings(L1, L2)
     else: # operator == 'OR'
         results = union_postings(L1, L2)
         
+    search_time_ms = (time.time() - start_time) * 1000
     print(f"Match count: {len(results)}")
     
-    # Write to output file
-    # We write docids one per line
+    # Write to output file in incremental append mode
     try:
-        with open(output_filepath, 'w') as out:
-            for docid in results:
-                out.write(f"{docid}\n")
-        print(f"Results written to {output_filepath}")
+        with open(output_filepath, 'a') as out:
+            out.write(f"[{datetime.now().strftime('%Y-%m-%d %H:%M:%S')}]\n")
+            out.write(f"Query: {query_str}\n")
+            out.write(f"Search Time: {search_time_ms:.3f} ms\n")
+            out.write(f"Match Count: {len(results)}\n")
+            out.write(f"Results: {', '.join(map(str, results)) if results else 'None'}\n")
+            out.write("-" * 50 + "\n\n")
+            
+        print(f"Results appended to {output_filepath}")
     except IOError as e:
-        print(f"Error writing to output file: {e}", file=sys.stderr)
+        print(f"Error appending to output file: {e}", file=sys.stderr)
         sys.exit(1)
 
 if __name__ == "__main__":
