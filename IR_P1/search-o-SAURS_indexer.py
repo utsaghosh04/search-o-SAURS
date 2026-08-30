@@ -1,4 +1,5 @@
 import sys
+import os
 
 def build_index(input_filepath, output_filepath):
     postings = {}
@@ -42,10 +43,14 @@ def build_index(input_filepath, output_filepath):
         with open(output_filepath, 'w') as out:
             # First line: vocabulary_size, max_docid
             out.write(f"{vocab_size}, {max_docid}\n")
-            # Subsequent lines: token docids_comma_separated
+            # Subsequent lines: token df docid1,docid2,...
+            # The df (document frequency) enables the search engine to know
+            # the postings list size without parsing it — used for query
+            # term ordering in AND optimization.
             for token in sorted_tokens:
+                df = len(postings[token])
                 docids_str = ",".join(str(doc_id) for doc_id in postings[token])
-                out.write(f"{token} {docids_str}\n")
+                out.write(f"{token} {df} {docids_str}\n")
     except IOError as e:
         print(f"Error writing to index file: {e}", file=sys.stderr)
         sys.exit(1)
@@ -56,8 +61,8 @@ def build_index(input_filepath, output_filepath):
     print(f"Index written to {output_filepath}")
 
 def main():
-    input_file = "search-o-SAURS_processed.all"
-    output_file = "search-o-SAURS_cran.index"
+    input_file = os.path.join("output", "search-o-SAURS_processed.all")
+    output_file = os.path.join("output", "search-o-SAURS_cran.index")
     build_index(input_file, output_file)
 
 if __name__ == "__main__":

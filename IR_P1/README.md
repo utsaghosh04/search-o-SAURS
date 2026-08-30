@@ -1,6 +1,4 @@
-<div align="center">
 
-<br/>
 
 ```
  ██████╗███████╗ █████╗ ██████╗  ██████╗██╗  ██╗      ██████╗      ███████╗ █████╗ ██╗   ██╗██████╗ ███████╗
@@ -11,343 +9,395 @@
 ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝      ╚═════╝      ╚══════╝╚═╝  ╚═╝ ╚═════╝ ╚═╝  ╚═╝╚══════╝
 ```
 
-<h1>🦕 search-o-SAURS</h1>
 
-<p><em>A prehistoric-powerful Information Retrieval engine — built from scratch.</em></p>
 
-<br/>
+**A Boolean Information Retrieval System for the Cranfield Aeronautics Corpus**
 
-[![Python](https://img.shields.io/badge/Python-3.x-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![Dataset](https://img.shields.io/badge/Dataset-Cranfield_1400-FF6B6B?style=for-the-badge&logo=databricks&logoColor=white)](http://ir.dcs.gla.ac.uk/resources/test_collections/cran/)
-[![Algorithm](https://img.shields.io/badge/Stemmer-Porter_Algorithm-4ECDC4?style=for-the-badge&logo=algorithmia&logoColor=white)](https://tartarus.org/martin/PorterStemmer/)
-[![Model](https://img.shields.io/badge/Retrieval-Boolean_Model-FFE66D?style=for-the-badge&logo=searchengineland&logoColor=black)](https://en.wikipedia.org/wiki/Boolean_model_of_information_retrieval)
-[![Assignment](https://img.shields.io/badge/IR-Programming_Assignment_1-A8E6CF?style=for-the-badge&logo=academia&logoColor=black)]()
-
-<br/>
-
-> **PA1 · Information Retrieval · IIT Kharagpur**
-> _Preprocessing · Indexing · Boolean Search over the Cranfield Collection_
+Built as part of Programming Assignment 1 for the Information Retrieval course.
 
 ---
 
-</div>
 
-<br/>
 
-## 📖 Table of Contents
+## Table of Contents
 
-- [🌍 Overview](#-overview)
-- [🗂️ Project Structure](#️-project-structure)
-- [⚙️ The Pipeline](#️-the-pipeline)
-  - [Stage 1 — Preprocessing](#stage-1--preprocessing)
-  - [Stage 2 — Indexing](#stage-2--indexing)
-  - [Stage 3 — Boolean Search](#stage-3--boolean-search)
-- [🚀 How to Run](#-how-to-run)
-- [📂 File Formats](#-file-formats)
-- [📊 Stats & Results](#-stats--results)
-- [🧠 Algorithm Deep Dive](#-algorithm-deep-dive)
+- [Overview](#overview)
+- [Project Structure](#project-structure)
+- [Quick Start](#quick-start)
+- [Pipeline Architecture](#pipeline-architecture)
+- [File Descriptions](#file-descriptions)
+- [Usage](#usage)
+- [Design Decisions](#design-decisions)
+- [Optimizations](#optimizations)
+- [Testing](#testing)
 
 ---
 
-## 🌍 Overview
 
-**search-o-SAURS** is a fully hand-crafted, from-scratch Information Retrieval (IR) system. No IR libraries. No shortcuts. Just raw NLP logic, a classic inverted index, and lightning-fast set-algebra for Boolean queries — all operating over the **Cranfield collection** of 1,400 scientific aeronautics abstracts.
 
-This was built as part of **Programming Assignment 1** for the Information Retrieval course. The system implements the complete classical IR pipeline:
+## Overview
 
-```
-Raw Text ──► Tokenization ──► Normalization ──► Stop Word Removal ──► Stemming
-                                                                          │
-                                                                          ▼
-                                                                  Inverted Index
-                                                                          │
-                                                                          ▼
-                                                              Boolean Query Engine
-                                                           (AND / OR  ·  O(n) time)
-```
+search-o-SAURS is a complete Boolean retrieval system that processes the **Cranfield 1400** collection (1,400 aeronautics research abstracts) and supports **AND / OR** queries. The system implements:
+
+- **Multi-stage tokenization** (8 stages) tailored for scientific text
+- **British → American spelling normalization** (5 patterns with exception guards)
+- **Porter stemming** with the canonical reference implementation
+- **Stop word removal** using a curated stop word list
+- **Inverted index** with document frequency, sorted lexicographically
+- **Binary search** directly on the index file (O(log V) seeks)
+- **Adaptive AND merge** — two-pointer for balanced lists, galloping for skewed lists
 
 ---
 
-## 🗂️ Project Structure
+
+
+## Project Structure
 
 ```
 IR_P1/
+├── search-o-SAURS_preprocess.py   # Preprocessing pipeline (tokenize, normalize, stem, etc.)
+├── search-o-SAURS_indexer.py      # Inverted index builder
+├── search-o-SAURS_search.py       # Boolean search engine (binary search + merge)
+├── search-o-SAURS_pipeline.ipynb  # Complete pipeline notebook (self-contained)
+├── porter.py                      # Porter Stemmer (canonical implementation)
+├── README.md                      # This file
+├── .gitignore                     # Git ignore rules
 │
-├── 📄 PA1.pdf                          ← Assignment specification
+├── data/                          # Input data and resources
+│   ├── cran.all.1400              # Cranfield corpus (input)
+│   ├── stopwords.txt              # Stop word list (358 words)
+│   └── PA1.pdf                    # Assignment specification
 │
-├── 🗃️ cran.all.1400                    ← Raw Cranfield dataset (1400 docs)
-├── 🚫 stopwords.txt                    ← English stopwords list
+├── output/                        # Generated files and results
+│   ├── search-o-SAURS_processed.all   # Preprocessed corpus (generated)
+│   ├── search-o-SAURS_cran.index      # Inverted index file (generated)
+│   └── results/                       # Query result files
+│       ├── search-o-SAURS_results_aerodynamic_AND_experimental.txt
+│       ├── search-o-SAURS_results_shock_AND_wave.txt
+│       └── ... (other result files)
 │
-├── 🔬 search-o-SAURS_preprocess.py     ← Stage 1: NLP preprocessing pipeline
-├── 🗂️  search-o-SAURS_indexer.py       ← Stage 2: Inverted index builder
-├── 🔍 search-o-SAURS_search.py         ← Stage 3: Boolean query engine
-│
-├── 📦 porter.py                        ← Porter Stemmer (1980 algorithm)
-│
-├── 🗃️  search-o-SAURS_processed.all    ← OUTPUT: Preprocessed token file
-├── 📇 search-o-SAURS_cran.index        ← OUTPUT: Inverted index file
-│
-└── 📋 all_results.txt                  ← OUTPUT: Unified incremental query log
+└── tests/                         # Testing suite
+    └── test_search.py             # Comprehensive test suite (220 tests)
 ```
 
 ---
 
-## ⚙️ The Pipeline
 
-### Stage 1 — Preprocessing
 
-> **Script:** `search-o-SAURS_preprocess.py`
+## Quick Start
 
-The preprocessor parses the raw **Cranfield SGML-like format** and applies four sequential NLP transformations.
 
-#### 🔤 Cranfield Format Parser
-The dataset uses tagged fields. Only **Title (`.T`)** and **Abstract (`.W`)** are extracted — author (`.A`) and bibliography (`.B`) fields are intentionally ignored per the assignment spec.
 
-```
-.I 1          ← Document ID
-.T            ← Title field (USED ✅)
-experimental investigation of the aerodynamics of a wing in a slipstream
-.A            ← Authors (IGNORED ❌)
-bray, j. r.
-.B            ← Bibliography (IGNORED ❌)
-j. ae. soc. 65, 1961, 552.
-.W            ← Abstract (USED ✅)
-an experimental study...
-```
+### Prerequisites
 
-#### 🔄 Four NLP Transformations (in order)
+- Python 3.8+ (no external libraries required — fully self-contained)
 
-| Step | Function | What it does |
-|------|----------|-------------|
-| **1. Tokenization** | `tokenize(text)` | Splits on non-alphanumeric chars using regex `[a-zA-Z0-9]+`. Extracts only clean word/number tokens. |
-| **2. Normalization** | `normalize(tokens)` | Converts all tokens to **lowercase**. `Aerodynamic` → `aerodynamic` |
-| **3. Stop Word Removal** | `remove_stopwords(tokens, stopwords)` | Filters tokens present in `stopwords.txt` (e.g., "the", "a", "is", "of") |
-| **4. Stemming** | `stem(tokens)` | Applies **Porter Stemmer** to reduce words to their stems. `experimental` → `experiment` |
 
-#### 📤 Output Format: `search-o-SAURS_processed.all`
 
-```
-.I 1
-.S
-experiment investig aerodynam wing slipstream ...
-.I 2
-.S
-effect freestram veloc point vortex ...
-```
-
----
-
-### Stage 2 — Indexing
-
-> **Script:** `search-o-SAURS_indexer.py`
-
-Reads the preprocessed `.all` file and constructs an **inverted index** — the backbone of all fast IR systems.
-
-```
-Token ──► { doc_id₁, doc_id₂, doc_id₃, ... }  (sorted ascending)
-```
-
-**Key design decisions:**
-- Tokens are stored in **lexicographical (alphabetical) order**
-- Postings lists contain **comma-separated doc IDs in ascending order** with no duplicates
-- The first line stores metadata: `vocabulary_size, max_docid`
-
-#### 📤 Output Format: `search-o-SAURS_cran.index`
-
-```
-4615, 1400
-aerodynam 1,10,11,29,52,...
-experiment 1,7,9,21,27,...
-slipstream 1,532,...
-```
-
----
-
-### Stage 3 — Boolean Search
-
-> **Script:** `search-o-SAURS_search.py`
-
-A query engine that operates directly over the inverted index. Supports **two-term Boolean queries** with `AND` or `OR` connectives.
-
-#### 🔍 Query Processing Flow
-
-```
-Input Query String
-       │
-       ▼
-   Parse into:  TERM₁  OPERATOR  TERM₂
-       │
-       ▼
- Preprocess each term (lowercase → strip punctuation → Porter Stem)
-       │
-       ▼
- Look up postings lists from index: L₁ and L₂
-       │
-       ├──[AND]──► intersect_postings(L₁, L₂)  ──► Two-pointer sweep  O(|L₁| + |L₂|)
-       │
-       └──[OR]───► union_postings(L₁, L₂)      ──► Two-pointer sweep  O(|L₁| + |L₂|)
-       │
-       ▼
-  Write matching doc IDs to output file (one per line)
-```
-
-#### ⚡ Efficient Algorithms
-
-Both `AND` and `OR` use an **optimal two-pointer merge** — the same algorithm used in production IR systems — achieving linear time `O(|L₁| + |L₂|)`, far better than a naive nested-loop `O(|L₁| × |L₂|)` approach.
-
-**AND (Intersection):**
-```python
-# Two-pointer sweep — only advances the pointer with the smaller ID
-while i < len(L1) and j < len(L2):
-    if L1[i] == L2[j]: result.append(L1[i]); i++; j++
-    elif L1[i] < L2[j]: i++
-    else: j++
-```
-
-**OR (Union):**
-```python
-# Merges both lists in sorted order without duplicates
-# Similar to the merge step in merge-sort
-```
-
----
-
-## 🚀 How to Run
-
-> **Prerequisites:** Python 3.x — no additional packages needed.
-
-### Step 1 — Preprocess
+### Run the Full Pipeline
 
 ```bash
-# From the IR_P1/ directory
-python3 search-o-SAURS_preprocess.py
+# Step 1: Preprocess the corpus
+python search-o-SAURS_preprocess.py
+
+# Step 2: Build the inverted index
+python search-o-SAURS_indexer.py
+
+# Step 3: Run a Boolean query
+python search-o-SAURS_search.py "aerodynamic AND experimental" output/results/output.txt
+
+# Step 4: Run tests (optional)
+python tests/test_search.py
 ```
 
-This reads `cran.all.1400` and `stopwords.txt`, and outputs `search-o-SAURS_processed.all`.
+
+
+### Or Use the Notebook
+
+Open `search-o-SAURS_pipeline.ipynb` in Jupyter — it runs the complete pipeline in a single notebook with an interactive query cell.
+
+---
+
+
+
+## Pipeline Architecture
 
 ```
-✔ Loaded 571 stopwords.
-✔ Loaded 1400 documents.
-✔ Preprocessing completed. Output written to search-o-SAURS_processed.all
+                    ┌──────────────────────────────────────────────┐
+  cran.all.1400 ──► │  PREPROCESSING  (search-o-SAURS_preprocess.py) │
+                    │                                              │
+                    │  1. Tokenize    (8-stage tokenizer)          │
+                    │  2. Normalize   (case fold + British→American)│
+                    │  3. Stop Words  (remove 358 stop words)      │
+                    │  4. Stem        (Porter stemmer)              │
+                    │  5. Deduplicate (Boolean: presence only)      │
+                    │                                              │
+                    └────────────────┬─────────────────────────────┘
+                                     │
+                                     ▼
+                    ┌──────────────────────────────────────────────┐
+                    │  INDEXING  (search-o-SAURS_indexer.py)        │
+                    │                                              │
+                    │  Build sorted inverted index with df          │
+                    │  Format: token df docid1,docid2,...           │
+                    │                                              │
+                    └────────────────┬─────────────────────────────┘
+                                     │
+                                     ▼
+                      search-o-SAURS_cran.index
+                      (4,183 terms, lexicographically sorted)
+                                     │
+                                     ▼
+                    ┌──────────────────────────────────────────────┐
+  "term1 AND term2" │  SEARCH  (search-o-SAURS_search.py)          │
+         ──────────►│                                              │
+                    │  1. Preprocess query terms (same pipeline)    │
+                    │  2. Binary search on index file (O(log V))   │
+                    │  3. AND: two-pointer or galloping merge      │
+                    │     OR:  two-pointer merge                   │
+                    │                                              │
+                    └────────────────┬─────────────────────────────┘
+                                     │
+                                     ▼
+                               results/output.txt
+                         (matching document IDs, one per line)
 ```
 
 ---
 
-### Step 2 — Build Index
+
+
+## File Descriptions
+
+
+
+### Core Pipeline Files
+
+
+| File                           | Lines | Purpose                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------ | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `search-o-SAURS_preprocess.py` | 454   | **Preprocessing pipeline.** Parses the Cranfield corpus, then applies a 5-stage pipeline: Tokenize (8-stage tokenizer handling abbreviations, possessives, hyphens, slashes, number-word splits) → Normalize (case fold + 5-pattern British→American spelling equivalence with exception guards) → Stop word removal → Porter stemming → Deduplication. Outputs `search-o-SAURS_processed.all`. |
+| `search-o-SAURS_indexer.py`    | 69    | **Index builder.** Reads the preprocessed file, builds an inverted index as a sorted flat file. Each line: `token df docid1,docid2,...`. First line: `vocab_size, max_docid`. The df (document frequency) field enables search-time optimizations.                                                                                                                                              |
+| `search-o-SAURS_search.py`     | 435   | **Boolean search engine.** Implements binary search directly on the sorted index file (O(log V) seeks via buffered backward scan in binary mode). For AND queries, adaptively selects between two-pointer merge (O(n+m)) and galloping search (O(k·log(n/k))) based on postings list size ratio. Query terms are preprocessed with the identical normalization+stemming pipeline as documents.  |
+
+
+
+
+### Supporting Files
+
+
+| File                            | Purpose                                                                                                                   |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `porter.py`                     | Canonical Porter Stemmer implementation (Vivake Gupta, from tartarus.org). Used unchanged as permitted by the assignment. |
+| `stopwords.txt`                 | 358 stop words used for filtering (in `data/`).                                                                           |
+| `cran.all.1400`                 | The Cranfield collection (in `data/`).                                                                                    |
+| `search-o-SAURS_pipeline.ipynb` | Self-contained Jupyter notebook that runs the entire pipeline.                                                            |
+| `test_search.py`                | Comprehensive test suite with **220 tests** (in `tests/`).                                                                |
+
+
+
+
+### Generated Files
+
+
+| File                                  | Generated By    | Contents                                                                                                             |
+| ------------------------------------- | --------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `output/search-o-SAURS_processed.all` | `preprocess.py` | Preprocessed corpus. Format: `.I docid` + `.S` + space-separated stems. 76,863 unique tokens across 1,400 documents. |
+| `output/search-o-SAURS_cran.index`    | `indexer.py`    | Inverted index. 4,183 terms sorted lexicographically with document frequencies and ascending postings lists.         |
+| `output/results/*.txt`                | `search.py`     | Query result files. Each contains matching document IDs, one per line, in ascending order.                           |
+
+
+---
+
+
+
+## Usage
+
+
+
+### Running a Query
 
 ```bash
-python3 search-o-SAURS_indexer.py
+python search-o-SAURS_search.py "<QUERY>" <OUTPUT_FILE> [INDEX_FILE]
 ```
 
-This reads `search-o-SAURS_processed.all` and outputs `search-o-SAURS_cran.index`.
+**Arguments:**
 
-```
-✔ Indexing completed.
-✔ Vocabulary Size: 4615
-✔ Maximum DocID Indexed: 1400
-✔ Index written to search-o-SAURS_cran.index
-```
+- `<QUERY>` — A Boolean query: `"term1 AND term2"` or `"term1 OR term2"`
+- `<OUTPUT_FILE>` — Path to write result document IDs
+- `[INDEX_FILE]` — Optional, defaults to `search-o-SAURS_cran.index`
 
----
-
-### Step 3 — Search!
+**Examples:**
 
 ```bash
 # AND query
-python3 search-o-SAURS_search.py "aerodynamic AND experimental" all_results.txt
+python search-o-SAURS_search.py "aerodynamic AND experimental" output/results/output.txt
 
 # OR query
-python3 search-o-SAURS_search.py "boundary OR layer" all_results.txt
+python search-o-SAURS_search.py "boundary OR layer" output/results/output.txt
 
-# With a custom index file path (optional 3rd argument)
-python3 search-o-SAURS_search.py "flow AND turbulent" all_results.txt path/to/my.index
+# British spelling (automatically normalized to American)
+python search-o-SAURS_search.py "behaviour AND flow" output/results/output.txt
 ```
 
-#### Usage
+**Sample output:**
 
 ```
-python3 search-o-SAURS_search.py "<Term1> <AND|OR> <Term2>" <output_file> [index_file]
+Original Query: 'aerodynamic AND experimental'
+Parsed Terms: 'aerodynam' AND 'experiment'
+Searching index file: output\search-o-SAURS_cran.index
+  Index contains 4,183 terms, max docid = 1400
+  [Binary Search] Found 'aerodynam' (df=179) in 9 seeks
+  [Binary Search] Found 'experiment' (df=339) in 7 seeks
+Postings for 'aerodynam' (size 179): [1, 5, 11, 13, 14, 29, 32, 33, 36, 44]...
+Postings for 'experiment' (size 339): [1, 11, 12, 16, 17, 19, 25, 29, 30, 35]...
+  [AND] Algorithm: two-pointer | Lists: 179 vs 339 (ratio 1.9x) | O(179+339)
+Match count: 49
+Results written to output/results/output.txt
 ```
 
 ---
 
-## 📂 File Formats
 
-### Preprocessed File (`.all`)
 
-```
-.I <doc_id>
-.S
-<space-separated stemmed tokens>
-```
+## Design Decisions
 
-### Index File (`.index`)
 
-```
-<vocabulary_size>, <max_doc_id>
-<token> <docid₁>,<docid₂>,<docid₃>,...
-<token> <docid₁>,<docid₂>,...
-...
-```
-> All tokens are sorted **lexicographically**. All docid lists are sorted in **ascending order**.
 
-### Results File
+### 1. Pipeline Ordering
 
-```
-<docid>
-<docid>
-<docid>
-...
-```
-> One document ID per line, in ascending order.
+The assignment lists the preprocessing steps as: Tokenization → Stemming → Stop word removal → Normalization.
 
----
+Our execution order is: **Tokenize → Normalize → Stop word removal → Stem → Deduplicate**.
 
-## 📊 Stats & Results
+This reordering is **necessary for correctness** due to hard logical dependencies:
 
-| Metric | Value |
-|--------|-------|
-| 📚 Documents Indexed | **1,400** |
-| 🔤 Vocabulary Size | **4,615 unique tokens** |
-| 🗄️ Index Size | ~372 KB |
-| 📝 Stopwords Filtered | 571 words |
 
-### Sample Query Results
+| Constraint                       | Reason                                                                                                                                         |
+| -------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Normalize **before** Stem        | The Porter stemmer only recognizes lowercase vowels (`a,e,i,o,u`). Uppercase input produces incorrect stems: `stem("BOUNDARY")` = `"BOUNDARY"` |
+| British→American **before** Stem | Without normalization: `stem("behaviour")` ≠ `stem("behavior")` — they diverge, fragmenting the index                                          |
+| Stop words **before** Stem       | 7 stop words (`are→ar`, `has→ha`, `this→thi`, etc.) survive removal after stemming because their stemmed forms don't match the stop word list  |
 
-**Query: `aerodynamic AND experimental`**
 
-Matched **49 documents**, including:
-`1, 11, 29, 52, 137, 142, 202, 203, 216, 225 ...` _(see `all_results.txt` for full log)_
+All four preprocessing functions specified in the assignment are implemented as separate, documented functions.
 
----
+### 2. British → American Spelling Normalization
 
-## 🧠 Algorithm Deep Dive
+The Cranfield corpus mixes British and American authored papers. Without normalization, the Porter stemmer produces different stems for the same concept:
 
-### Porter Stemmer (1980)
 
-The `porter.py` module implements **M. F. Porter's landmark 1980 algorithm** _(Program, Vol. 14, no. 3, pp 130-137)_. It reduces English words to their morphological roots through five sequential suffix-stripping steps:
+| British    | American   | Stem (without normalization) | Stem (with normalization) |
+| ---------- | ---------- | ---------------------------- | ------------------------- |
+| behaviour  | behavior   | `behaviour` ≠ `behavior`     | `behavior` ✓              |
+| linearised | linearized | `linearis` ≠ `linear`        | `linear` ✓                |
+| centre     | center     | `centr` ≠ `center`           | `center` ✓                |
+| vapour     | vapor      | `vapour` ≠ `vapor`           | `vapor` ✓                 |
 
-| Step | Purpose | Example |
-|------|---------|---------|
-| `step1ab` | Remove plurals, `-ed`, `-ing` | `caresses → caress`, `matting → mat` |
-| `step1c` | `y → i` when vowel in stem | `happy → happi` |
-| `step2` | Map double suffixes | `ization → ize` |
-| `step3` | Handle `-ic-`, `-ful`, `-ness` | `electrical → electric` |
-| `step4` | Remove residual suffixes | `-ance`, `-ment`, `-ion` |
-| `step5` | Final `-e` and `-ll` cleanup | `probate → probat`, `roll → rol` |
 
-The implementation follows the canonical algorithm with two noted **DEPARTURES** that are considered improvements over the original paper.
+Five rule-based patterns are applied:
+
+- **A:** `-ise`/`-ised`/`-ising`/`-isation` → `-ize`/`-ized`/`-izing`/`-ization`
+- **B:** `-our` → `-or`
+- **C:** `-tre`/`-bre` → `-ter`/`-ber`
+- **D:** `-ogue` → `-og`
+- **E:** `-mme` → `-m`
+
+Each pattern has a curated exception set to prevent false conversions (e.g., `noise`, `rise`, `four`, `contour`, `vogue`).
+
+### 3. Token Deduplication
+
+In Boolean retrieval, only term **presence** matters, not frequency. Deduplication achieves a **41.2% token reduction** (130,757 → 76,863 tokens) — reducing index size and search time without affecting retrieval accuracy.
+
+### 4. Query-Document Parity
+
+The query preprocessing pipeline (`preprocess_query_term()` in search.py) applies the **exact same** normalization rules as the document pipeline. This guarantees that a query for `"behaviour"` is normalized to `"behavior"` → stemmed to `"behavior"` — matching the indexed form. This parity is verified by 26 dedicated tests.
 
 ---
 
-<div align="center">
 
-<br/>
+
+## Optimizations
+
+
+
+### Binary Search on Index File
+
+Instead of loading all 4,183 index entries into memory (O(V) space), we perform **binary search by byte position** directly on the sorted file — finding any term in **O(log V) ≈ 12 seeks**.
+
+Key implementation details:
+
+- **Binary mode (**`rb`**)** for precise byte-level seeking (text mode on Windows breaks `seek()`/`tell()` due to `\r\n` translation)
+- **Buffered backward scan** (256-byte chunks) to find line boundaries, handling lines of any length
+
+
+
+### Adaptive AND Merge (Galloping Search)
+
+For AND queries, the algorithm adapts based on postings list size ratio:
+
+
+| Ratio | Algorithm   | Complexity    | Example                                       |
+| ----- | ----------- | ------------- | --------------------------------------------- |
+| ≤ 10x | Two-pointer | O(n + m)      | `shock(240) AND wave(210)` → O(450)           |
+| > 10x | Galloping   | O(k·log(n/k)) | `ab(1) AND flow(730)` → O(1·log(730)) ≈ O(10) |
+
+
+Galloping search uses exponential jumps (1, 2, 4, 8, ...) followed by binary search in the last interval, giving O(log d) per element where d is the distance to the match.
+
+### Document Frequency in Index
+
+Each index line includes the document frequency: `token df docid1,docid2,...`. This enables the search engine to know postings list sizes without parsing them — used for query term ordering and skew detection.
 
 ---
 
-_Built with 🦕 by **search-o-SAURS** · IIT Kharagpur · Information Retrieval PA1_
+
+
+## Testing
+
+Run the comprehensive test suite:
+
+```bash
+python tests/test_search.py
+```
+
+
+
+### Test Coverage: 220 tests across 12 groups
+
+
+| Group                | Tests | What It Validates                                                                    |
+| -------------------- | ----- | ------------------------------------------------------------------------------------ |
+| 1. Tokenization      | 15    | Abbreviations, possessives, hyphens, slashes, number-word splits, noise, edge cases  |
+| 2. Normalization     | 25    | Case folding, all 5 British→American patterns, all exception guards, min-length      |
+| 3. Stop Words        | 4     | Removal correctness, empty input, all-stop-words                                     |
+| 4. Stemming          | 9     | Porter stemmer on key corpus terms                                                   |
+| 5. Deduplication     | 4     | Order preservation, identity, all-same, empty                                        |
+| 6. Query↔Doc Parity  | 26    | Exact normalization+stemming match between query and document pipelines              |
+| 7. Index Correctness | 8     | Header, lexicographic sort, df accuracy, sorted postings, no duplicates, spot checks |
+| 8. Binary Search     | 55    | Stratified sample across alphabet + boundary + nonexistent terms                     |
+| 9. AND/OR Merges     | 24    | Gallop search unit tests, AND/OR vs set operations, edge cases                       |
+| 10. End-to-End       | 13    | Raw queries → correct results, British spelling queries, missing terms               |
+| 11. Spot Checks      | 8     | Specific document membership, British≡American equivalence, commutativity            |
+| 12. Invariants       | 30    | `|A∩B| ≤ min(|A|,|B|)`, `|A∪B| ≥ max(|A|,|B|)`, inclusion-exclusion, membership      |
+
 
 ---
 
-</div>
+
+
+## Statistics
+
+
+| Metric                             | Value                  |
+| ---------------------------------- | ---------------------- |
+| Documents in corpus                | 1,400                  |
+| Stop words                         | 358                    |
+| Vocabulary size (indexed terms)    | 4,183                  |
+| Total tokens before dedup          | 130,757                |
+| Total tokens after dedup           | 76,863                 |
+| Deduplication savings              | 41.2%                  |
+| Binary search seeks per query term | 7–14 (vs 4,183 linear) |
+| Test coverage                      | 220 tests, 12 groups   |
+
+
