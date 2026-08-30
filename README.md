@@ -49,11 +49,12 @@
 ## 🔗 Quick Links
 
 - 📄 [**PA1 — Full Documentation**](./IR_P1/README.md)
-- 📋 [**PA1 Assignment Spec**](./IR_P1/PA1.pdf)
+- 📋 [**PA1 Assignment Spec**](./IR_P1/data/PA1.pdf)
 - 🔍 [**Boolean Search Engine**](./IR_P1/search-o-SAURS_search.py)
 - 🗂️ [**Inverted Index**](./IR_P1/search-o-SAURS_indexer.py)
 - 🔬 [**NLP Preprocessor**](./IR_P1/search-o-SAURS_preprocess.py)
-- 📊 [**Query Results Log**](./IR_P1/all_results.txt)
+- 📊 [**Query Results**](./IR_P1/output/results/)
+- 🧪 [**Tests**](./IR_P1/tests/test_search.py)
 
 ---
 
