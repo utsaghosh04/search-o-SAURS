@@ -1,36 +1,9 @@
 """
--------------------------------------------------------------------------------
-  COMPREHENSIVE CORRECTNESS & BENCHMARK SUITE
-  search-o-SAURS Boolean IR Pipeline - Cranfield Collection
--------------------------------------------------------------------------------
-
 This script performs:
 
   PART A - CORRECTNESS TESTING (against PA1 problem statement)
-  -------------------------------------------------------------
-   1. Cranfield Parsing: All 1400 docs parsed, only .T and .W fields
-   2. Preprocessing: Tokenization, Normalization, Stemming, Stop-word removal
-   3. Output Format: .I / .S tag compliance
-   4. Index Format: header, sorted tokens, ascending docids, df accuracy
-   5. Boolean Search: AND/OR correctness, commutativity, identity laws
-   6. Query Preprocessing Parity: doc pipeline == query pipeline
-
   PART B - BENCHMARK & STATISTICAL ANALYSIS
-  ------------------------------------------
-   7. Vocabulary Statistics (Heap's Law, Zipf's Law)
-   8. Index Compression Analysis (term distribution, df statistics)
-   9. Comparison with published Cranfield benchmarks from IR literature
-  10. Search Performance Profiling (binary search vs linear scan)
-  11. Stemmer validation against published Porter stemmer test vectors
-  12. Stop word coverage analysis
-
   PART C - EDGE CASE & STRESS TESTING
-  ------------------------------------
-  13. Boundary conditions (empty docs, single-token docs, etc.)
-  14. Adversarial queries
-  15. Large-scale merge stress tests
-
-Author: Automated Test Suite
 """
 
 import os
