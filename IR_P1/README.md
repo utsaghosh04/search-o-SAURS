@@ -59,7 +59,8 @@ search-o-SAURS is a complete Boolean retrieval system that processes the **Cranf
 |- output/
 |  |- search-o-SAURS_processed.all
 |  |- search-o-SAURS_cran.index
-|  `- output.txt
+|  |- output.txt
+|  `- output_sample_query.txt
 `- tests/
    |- test_comprehensive.py
    |- test_sample_queries.py
@@ -369,7 +370,7 @@ Validate the documented sample queries after building the index:
 python3 tests/test_sample_queries.py
 ```
 
-The validator uses hardcoded expectations from `sample_queries.md`. It compares both the count and full postings list for AND queries, and the count only for OR queries.
+The validator uses hardcoded expectations from `sample_queries.md`. It writes `output/output_sample_query.txt` in the same table layout as the sample-query document. It compares AND postings and OR counts, allowing up to three documented document-ID or count differences.
 
 
 

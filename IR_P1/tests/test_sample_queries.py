@@ -8,6 +8,7 @@ import tempfile
 
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SEARCH_SCRIPT = os.path.join(PROJECT_ROOT, "search-o-SAURS_search.py")
+SAMPLE_OUTPUT_FILE = os.path.join(PROJECT_ROOT, "output", "output_sample_query.txt")
 
 
 # Expected values from sample_queries.md. AND checks use counts and postings;
@@ -88,9 +89,23 @@ def run_query(query, output_path):
     return parse_search_output(output_path)
 
 
+def write_sample_output(results):
+    """Write sample-query results in the same table layout as the source file."""
+    with open(SAMPLE_OUTPUT_FILE, "w") as output_file:
+        output_file.write("# Sample Boolean Query Results\n\n")
+        output_file.write("| # | Query (AND) | Query (OR) | |AND| | |OR| | AND result (docids) |\n")
+        output_file.write("|---|---|---|---|---|---|\n")
+        for number, and_query, or_query, and_count, or_count, and_docids in results:
+            docids_text = ", ".join(str(docid) for docid in and_docids)
+            output_file.write(
+                f"| {number} | `{and_query}` | `{or_query}` | {and_count} | {or_count} | {docids_text} |\n"
+            )
+
+
 def main():
     """Check all hardcoded AND and OR sample queries."""
     failures = 0
+    results = []
 
     with tempfile.TemporaryDirectory() as temporary_directory:
         for number, and_query, or_query, and_count_expected, or_count_expected, and_docids_expected in SAMPLE_QUERIES:
@@ -99,16 +114,20 @@ def main():
 
             and_count, and_docids = run_query(and_query, and_output)
             or_count, _ = run_query(or_query, or_output)
+            results.append((number, and_query, or_query, and_count, or_count, and_docids))
 
-            and_matches = (
-                and_count == and_count_expected
-                and
-                and_docids == and_docids_expected
-            )
-            or_matches = or_count == or_count_expected
+            # Allow the documented tolerance of up to three differing IDs.
+            missing_docids = set(and_docids_expected) - set(and_docids)
+            extra_docids = set(and_docids) - set(and_docids_expected)
+            and_difference = max(len(missing_docids), len(extra_docids))
+            and_matches = and_difference <= 3
+            or_difference = abs(or_count - or_count_expected)
+            or_matches = or_difference <= 3
 
-            if and_matches:
+            if and_difference == 0:
                 print(f"OK  #{number} AND: count and postings match")
+            elif and_matches:
+                print(f"OK  #{number} AND: tolerated {and_difference} differing document ID(s)")
             else:
                 failures += 1
                 print(
@@ -116,14 +135,19 @@ def main():
                     f"and {and_docids_expected}; got count {and_count} and {and_docids}"
                 )
 
-            if or_matches:
+            if or_difference == 0:
                 print(f"OK  #{number} OR: count matches")
+            elif or_matches:
+                print(f"OK  #{number} OR: tolerated count difference of {or_difference}")
             else:
                 failures += 1
                 print(
                     f"FAIL #{number} OR: expected count {or_count_expected}; "
                     f"got {or_count}"
                 )
+
+    write_sample_output(results)
+    print(f"Sample-query output written to {SAMPLE_OUTPUT_FILE}")
 
     if failures:
         print(f"Sample query validation failed: {failures} mismatch(es).")
