@@ -7,18 +7,6 @@ def tokenize(text):
     """
     Tokenization: Convert a document text into a list of meaningful token strings.
 
-    This is a multi-stage tokenizer that makes explicit decisons for edge cases
-    commonly found in scientific text (Cranfield aeronautics corpus):
-
-    Stage 1: Normalize whitespace and pre-clean the raw text.
-    Stage 2: Handle abrevations with periods (e.g., "u.s.a." -> "usa")
-    Stage 3: Handle possessives/contractions (e.g., "prandtl's" -> "prandtl")
-    Stage 4: Handle hyphenated compounds (e.g., "high-speed" -> "high", "speed")
-    Stage 5: Handle slash-separated terms (e.g., "lift/drag" -> "lift", "drag")
-    Stage 6: Split numbers glued to words (e.g., "10degree" -> "10", "degree")
-    Stage 7: Extract final tokens (alphanumeric sequences)
-    Stage 8: Filter noise (single chars, pure numerics)
-
     Returns:
         list[str]: A list of cleaned, meaningful token strings.
     """
@@ -59,12 +47,7 @@ def normalize(tokens):
     Normalization: Transform tokens into canonical forms to ensure equivelent
     terms map to the same representetion, maximizing recall.
 
-    This is a multi-stage normalizer that makes explicit decisons based on
-    analysis of the Cranfield aeronautics corpus:
-
-    Stage 1: Case folding (e.g., "Aerodynamic" -> "aerodynamic")
-    Stage 2: British -> American spelling equivalence (e.g., "behaviour" -> "behavior")
-    Stage 3: Minimum length filter (remove tokens with len < 2)
+    Case folding, British -> American spelling equivalence and minimum length filter (remove tokens with len < 2)
 
     Returns:
         list[str]: Normalized token list.

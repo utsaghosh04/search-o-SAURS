@@ -17,22 +17,17 @@ def binary_search_index(filepath, target_term):
     """
     Binary search directly on the sorted indxe file.
 
-    ALGORITHM:
-    ---------
     The index file is sorted lexicographically by token. Instead of loading
     all 4,183 lines into memory (O(V) space and time), we perform binary
-    search by byte position on the file - finding any term in O(log V)
-    seeks ~= 12 disk reads for our vocabulary.
+    search by byte position on the file.
 
     COMPLEXITY:
       Time:  O(log V) where V = vocabulary size
       Space: O(1) only one line in memory at a time
-      I/O: ~12 seeks for 4183 terms (log2 4183 ~= 12)
 
     INDEX FORMAT (each data line):
       token df docid1,docid2,...
       e.g.: "experiment 339 1,11,12,16,..."
-      The df (document frequency) is parsed and returned alongside postings.
 
     Returns:
         (list[int], int) - (postings list, document frequency) if found
@@ -126,15 +121,12 @@ def _gallop_search(arr, target, start):
     Galloping (exponential) search: Find the position of 'target' in 'arr'
     starting from indxe 'start'.
 
-    ALGORITHM:
-    ----------
     1. Exponential jump: start at step=1, double each time (1,2,4,8,16,...)
        until we oversoot (arr[pos] >= target).
     2. Binary search: within the last interval [prev_pos, pos].
 
     COMPLEXITY: O(log d) where d = distance from 'start' to the target's
-    position. This is much better than linear scan when d is small relative
-    to the remaining list length.
+    position.
 
     Returns:
         int - index where arr[index] >= target (or len(arr) if not found)
@@ -175,14 +167,8 @@ def intersect_postings(L1, L2):
       1. Two-pointer merge: O(n + m) - optimal when lists are similar size
       2. Galloping search: O(k * log(n/k)) - optimal when lists are skewed
 
-    DECISION:
       If len(longer) / len(shorter) > 10, use galloping.
       Otherwise, use two-pointer.
-
-    Example:
-      "ab AND flow" -> ab: 1 doc, flow: 730 docs
-        Two-pointer: O(1 + 730) = 731 comparisons
-        Galloping: O(1 * log(730)) = ~10 comparisons <- 73x faster
     """
     if not L1 or not L2:
         return []
