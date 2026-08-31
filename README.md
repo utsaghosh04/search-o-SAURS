@@ -96,9 +96,18 @@ IR_P1/
 ### Run the Full Pipeline
 
 #### Option A: One-Command Execution (Recommended)
-You can execute the entire pipeline (Preprocessing → Indexing → Sample Query → Tests) using the provided helper script:
+You can execute the entire pipeline (Preprocessing → Indexing → Search) using the provided helper script. The script allows you to enter your query interactively, or pass it as an argument. Testing is optional and can be enabled via the `--test` flag:
 ```bash
-chmod +x run_pipeline.sh && ./run_pipeline.sh
+chmod +x run_pipeline.sh
+
+# Interactive query input, no tests
+./run_pipeline.sh
+
+# Provide query as an argument
+./run_pipeline.sh "aerodynamic AND experimental"
+
+# Run with tests enabled
+./run_pipeline.sh "aerodynamic AND experimental" --test
 ```
 
 #### Option B: Step-by-Step Execution
