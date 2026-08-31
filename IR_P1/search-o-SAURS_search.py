@@ -15,7 +15,7 @@ def read_index_header(filepath):
 
 def binary_search_index(filepath, target_term):
     """
-    Binary search directly on the sorted index file.
+    Binary search directly on the sorted indxe file.
 
     ALGORITHM:
     ---------
@@ -24,18 +24,10 @@ def binary_search_index(filepath, target_term):
     search by byte position on the file - finding any term in O(log V)
     seeks ~= 12 disk reads for our vocabulary.
 
-    OPTIMIZATION: Buffered backward scan
-    -------------------------------------
-    When seeking to a midpoint, we need to find the start of the current
-    line. Instead of reading backwards byte-by-byte (O(line_length) seeks),
-    we read 256-byte chunks backwards and scan the buffer in memory:
-      Byte-by-byte: up to 1,445 individual seek+read for long lines
-      Buffered:     up to 6 chunk reads (1,445 / 256 ~= 6)
-
     COMPLEXITY:
-      Time:  O(log V)  where V = vocabulary size
-      Space: O(1)      only one line in memory at a time
-      I/O:   ~12 seeks for 4183 terms (log2 4183 ~= 12)
+      Time:  O(log V) where V = vocabulary size
+      Space: O(1) only one line in memory at a time
+      I/O: ~12 seeks for 4183 terms (log2 4183 ~= 12)
 
     INDEX FORMAT (each data line):
       token df docid1,docid2,...
@@ -44,7 +36,7 @@ def binary_search_index(filepath, target_term):
 
     Returns:
         (list[int], int) - (postings list, document frequency) if found
-        (None, 0)        - if term is not in the index
+        (None, 0) - if term is not in the index
     """
     if not os.path.exists(filepath):
         print(f"Error: Index file not found at {filepath}", file=sys.stderr)
@@ -132,12 +124,12 @@ def binary_search_index(filepath, target_term):
 def _gallop_search(arr, target, start):
     """
     Galloping (exponential) search: Find the position of 'target' in 'arr'
-    starting from index 'start'.
+    starting from indxe 'start'.
 
     ALGORITHM:
     ----------
     1. Exponential jump: start at step=1, double each time (1,2,4,8,16,...)
-       until we overshoot (arr[pos] >= target).
+       until we oversoot (arr[pos] >= target).
     2. Binary search: within the last interval [prev_pos, pos].
 
     COMPLEXITY: O(log d) where d = distance from 'start' to the target's
@@ -180,8 +172,8 @@ def intersect_postings(L1, L2):
     AND (intersection) with adaptive algorithm selection.
 
     Two algorithms are available:
-      1. Two-pointer merge: O(n + m)  - optimal when lists are similar size
-      2. Galloping search:  O(k * log(n/k)) - optimal when lists are skewed
+      1. Two-pointer merge: O(n + m) - optimal when lists are similar size
+      2. Galloping search: O(k * log(n/k)) - optimal when lists are skewed
 
     DECISION:
       If len(longer) / len(shorter) > 10, use galloping.
@@ -189,8 +181,8 @@ def intersect_postings(L1, L2):
 
     Example:
       "ab AND flow" -> ab: 1 doc, flow: 730 docs
-        Two-pointer:  O(1 + 730) = 731 comparisons
-        Galloping:    O(1 * log(730)) = ~10 comparisons   <- 73x faster
+        Two-pointer: O(1 + 730) = 731 comparisons
+        Galloping: O(1 * log(730)) = ~10 comparisons <- 73x faster
     """
     if not L1 or not L2:
         return []
@@ -274,7 +266,7 @@ def preprocess_query_term(term):
     to documents during indexing. This is CRITICAL for correctness - if the
     query normalization differs from the index normalization, terms won't match.
 
-    Pipeline: clean -> lowercase -> British->American normalize -> stem
+    Pipeline: clean -> lowercase -> British-American normalize -> stem
     """
 
     # Match document preprocessing by removing punctuation and folding case.

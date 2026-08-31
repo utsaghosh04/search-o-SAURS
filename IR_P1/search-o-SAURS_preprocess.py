@@ -7,17 +7,17 @@ def tokenize(text):
     """
     Tokenization: Convert a document text into a list of meaningful token strings.
 
-    This is a multi-stage tokenizer that makes explicit decisions for edge cases
+    This is a multi-stage tokenizer that makes explicit decisons for edge cases
     commonly found in scientific text (Cranfield aeronautics corpus):
 
     Stage 1: Normalize whitespace and pre-clean the raw text.
-    Stage 2: Handle abbreviations with periods  (e.g., "u.s.a." -> "usa")
-    Stage 3: Handle possessives/contractions     (e.g., "prandtl's" -> "prandtl")
-    Stage 4: Handle hyphenated compounds         (e.g., "high-speed" -> "high", "speed")
-    Stage 5: Handle slash-separated terms        (e.g., "lift/drag" -> "lift", "drag")
-    Stage 6: Split numbers glued to words        (e.g., "10degree" -> "10", "degree")
-    Stage 7: Extract final tokens                (alphanumeric sequences)
-    Stage 8: Filter noise                        (single chars, pure numerics)
+    Stage 2: Handle abrevations with periods (e.g., "u.s.a." -> "usa")
+    Stage 3: Handle possessives/contractions (e.g., "prandtl's" -> "prandtl")
+    Stage 4: Handle hyphenated compounds (e.g., "high-speed" -> "high", "speed")
+    Stage 5: Handle slash-separated terms (e.g., "lift/drag" -> "lift", "drag")
+    Stage 6: Split numbers glued to words (e.g., "10degree" -> "10", "degree")
+    Stage 7: Extract final tokens (alphanumeric sequences)
+    Stage 8: Filter noise (single chars, pure numerics)
 
     Returns:
         list[str]: A list of cleaned, meaningful token strings.
@@ -56,31 +56,15 @@ def tokenize(text):
 
 def normalize(tokens):
     """
-    Normalization: Transform tokens into canonical forms to ensure equivalent
-    terms map to the same representation, maximizing recall.
+    Normalization: Transform tokens into canonical forms to ensure equivelent
+    terms map to the same representetion, maximizing recall.
 
-    This is a multi-stage normalizer that makes explicit decisions based on
+    This is a multi-stage normalizer that makes explicit decisons based on
     analysis of the Cranfield aeronautics corpus:
 
-    Stage 1: Case folding            (e.g., "Aerodynamic" -> "aerodynamic")
-    Stage 2: British -> American      (e.g., "behaviour" -> "behavior")
-             spelling equivalence
-    Stage 3: Minimum length filter   (remove tokens with len < 2)
-
-    WHY NORMALIZATION MATTERS (evidence from Cranfield corpus):
-    -------------------------------------------------------------
-    Without spelling normalization, the Porter stemmer produces DIFFERENT
-    stems for British vs American variants. Empirically verified:
-
-      behaviour  -> stem "behaviour"   vs  behavior  -> stem "behavior"    (DIVERGE)
-      linearised -> stem "linearis"    vs  linearized -> stem "linear"     (DIVERGE)
-      centre     -> stem "centr"       vs  center     -> stem "center"     (DIVERGE)
-      vapour     -> stem "vapour"      vs  vapor      -> stem "vapor"      (DIVERGE)
-      analysed   -> stem "analys"      vs  analyzed   -> stem "analyz"     (DIVERGE)
-
-    A query for "behavior" would MISS 46 documents using "behaviour".
-    Normalization before stemming fixes this by mapping all variants to
-    one canonical form.
+    Stage 1: Case folding (e.g., "Aerodynamic" -> "aerodynamic")
+    Stage 2: British -> American spelling equivalence (e.g., "behaviour" -> "behavior")
+    Stage 3: Minimum length filter (remove tokens with len < 2)
 
     Returns:
         list[str]: Normalized token list.
@@ -234,21 +218,11 @@ def parse_cranfield(filepath):
 
 def deduplicate(tokens):
     """
-    Token deduplication: Remove duplicate tokens within a single document.
+    Token deduplication: Remove duplicate tokens within a singel document.
 
-    DECISION: Keep only unique tokens, preserving their first-occurrence order.
-    RATIONALE: In the Boolean retrieval model, only the PRESENCE of a term
-        in a document matters, not its frequency. A word appearing 5 times
-        is identical to appearing once for AND/OR queries.
-
-        Benefits:
-        - Reduces the processed file size (fewer tokens to write/read)
-        - Produces cleaner postings lists in the index (no duplicate docid checks needed)
-        - Speeds up index construction
-
-        Trade-off: If the system is later extended to TF-IDF or ranked retrieval,
+    NOTE: In the Boolean retrieval model, only the presence of a term
+        in a document matters, not its frequency. If the system is later extended to TF-IDF or ranked retrieval,
         deduplication would need to be removed since term frequency matters there.
-        For this Boolean assignment, it is purely beneficial.
 
     Returns:
         list[str]: Unique tokens in first-occurrence order.
