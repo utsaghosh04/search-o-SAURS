@@ -119,7 +119,7 @@ def load_index_bruteforce(filepath):
 
 def run_search_cmd(query, output_file="__test_out.txt"):
     result = subprocess.run(
-        ["python", "search-o-SAURS_search.py", query, output_file],
+        [sys.executable, "search-o-SAURS_search.py", query, output_file],
         capture_output=True, text=True
     )
     if result.returncode != 0:
