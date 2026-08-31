@@ -1,21 +1,3 @@
-"""
--------------------------------------------------------------------------------
-  COMPREHENSIVE TEST SUITE: search-o-SAURS Boolean Search Pipeline
--------------------------------------------------------------------------------
-
-Tests the ENTIRE pipeline from raw corpus text to final query results:
-  1. Tokenization correctness
-  2. Normalization correctness (British->American, case folding)
-  3. Stop word removal correctness
-  4. Stemming correctness
-  5. Deduplication correctness
-  6. Index correctness (format, sorted, df accuracy)
-  7. Binary search correctness (vs brute-force ground truth)
-  8. AND/OR merge correctness (two-pointer and galloping)
-  9. Query preprocessing parity (query pipeline == document pipeline)
- 10. End-to-end integration tests (raw text -> query -> correct docs)
-"""
-
 import os
 import re
 import sys
