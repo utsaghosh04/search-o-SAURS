@@ -174,8 +174,8 @@ The stop-word list (\texttt{stopwords.txt}) contains 357 common English words.
 \node[data, below=of dedup] (processed) {Preprocessed Corpus};
 \node[box, below=of processed] (indexer) {Inverted Index Builder};
 \node[data, below=of indexer] (index) {Sorted Inverted Index (4,183 terms)};
-\node[data, below=0.8cm of index, xshift=-3cm] (query) {Boolean Query};
 \node[box, below=0.8cm of index] (qpreprocess) {Query Preprocessing};
+\node[data, left=of qpreprocess, minimum width=3cm] (query) {Boolean Query};
 \node[box, below=of qpreprocess] (bsearch) {Binary Search on Index};
 \node[box, below=of bsearch] (merge) {AND / OR Posting-List Merge};
 \node[data, below=of merge] (results) {Matching Document IDs};
@@ -185,7 +185,7 @@ The stop-word list (\texttt{stopwords.txt}) contains 357 common English words.
 \draw[arrow] (stopwords)--(stem); \draw[arrow] (stem)--(dedup);
 \draw[arrow] (dedup)--(processed); \draw[arrow] (processed)--(indexer);
 \draw[arrow] (indexer)--(index); \draw[arrow] (index)--(qpreprocess);
-\draw[arrow] (query) |- (qpreprocess);
+\draw[arrow] (query)--(qpreprocess);
 \draw[arrow] (qpreprocess)--(bsearch); \draw[arrow] (bsearch)--(merge);
 \draw[arrow] (merge)--(results);
 
@@ -197,9 +197,9 @@ The stop-word list (\texttt{stopwords.txt}) contains 357 common English words.
 \label{fig:arch}
 \end{figure}
 
-Three scripts: \texttt{search-o-SAURS\_preprocess.py} (454 lines),
-\texttt{search-o-SAURS\_indexer.py} (69 lines),
-\texttt{search-o-SAURS\_search.py} (434 lines).
+Three scripts: \texttt{search-o-SAURS\_preprocess.py} (455 lines),
+\texttt{search-o-SAURS\_indexer.py} (70 lines),
+\texttt{search-o-SAURS\_search.py} (435 lines).
 
 %=============================================================================
 \section{Methodology}
@@ -566,31 +566,39 @@ OR (two-pointer) & O($n + m$) & O($n + m$) result \\
 \label{sec:testing}
 %=============================================================================
 
-The test suite (\texttt{tests/test\_search.py}, 720 lines) contains
-\textbf{220 tests} across \textbf{12 groups}.  All 220 tests pass.
+The test suite (\texttt{tests/test\_comprehensive.py}, 1,312 lines) contains
+\textbf{277 tests} across \textbf{17 functional groups}.  All 277 tests pass.
 
 \begin{table}[H]
 \centering\small
-\caption{Test suite: 220 tests across 12 groups.}
+\caption{Comprehensive test suite: 277 tests across 17 functional groups.}
 \label{tab:tests}
 \begin{tabular}{@{}c l c p{5.5cm}@{}}
 \toprule
-\textbf{\#} & \textbf{Group} & \textbf{Tests} & \textbf{What It Validates} \\
+\textbf{Group} & \textbf{Description} & \textbf{Tests} & \textbf{What It Validates} \\
 \midrule
-1 & Tokenization & 15 & Abbreviations, possessives, hyphens, slashes, number-word splits, noise \\
-2 & Normalization & 25 & All 5 patterns, all exception guards, case folding \\
-3 & Stop Words & 4 & Removal correctness, edge cases \\
-4 & Stemming & 9 & Porter stemmer on key corpus terms \\
-5 & Deduplication & 4 & Order preservation, identity \\
-6 & Query$\leftrightarrow$Doc Parity & 26 & Exact normalization+stemming match \\
-7 & Index Correctness & 8 & Header, sort, df accuracy, no duplicates \\
-8 & Binary Search & 55 & Stratified sample + boundary + nonexistent terms \\
-9 & AND/OR Merges & 24 & Gallop unit tests, set operations, edge cases \\
-10 & End-to-End & 13 & Raw queries $\to$ correct results \\
-11 & Spot Checks & 8 & Document membership, commutativity \\
-12 & Invariants & 30 & $|A \cap B| \leq \min(|A|,|B|)$, inclusion-exclusion \\
+1 & Cranfield Parsing & 10 & Field markers (.I, .T, .W), ID ranges, and text bounds \\
+2a & Tokenization & 17 & Basic, abbreviations, possessives, hyphens, slashes, numbers, noise \\
+2b & Normalization & 32 & British-American spelling patterns, exception guards, case folding \\
+2c & Stop Word Removal & 14 & Stop word set exclusions, preservation of search terms \\
+2d & Stemming & 16 & Porter stemmer correctness, 75 canonical test vectors \\
+2e & Deduplication & 5 & Presence-only mapping, first-occurrence ordering \\
+2f & Pipeline Integration & 16 & Integration of preprocessing stages on known documents \\
+3a & Processed File Format & 2 & PA1 specification tags (.I and .S), document counts \\
+3b & Index File Format & 10 & Lexicographical term sorting, ascending docid order, df accuracy \\
+4 & Index/Corpus Consistency & 2 & Forward (index $\to$ doc) and reverse (doc $\to$ index) parity \\
+5a & AND/OR Merges & 16 & Correctness of two-pointer and galloping posting-list merges \\
+5b & Boolean Algebra Laws & 18 & Commutativity, identity, and zero law for intersections/unions \\
+5c & Set-Theoretic Invariants & 20 & Set bounds, inclusion-exclusion, set membership \\
+6 & Query-Doc Parity & 44 & Identical preprocessing, dialect stem unification (10 pairs) \\
+7 & Exhaustive Search & 1 & Complete binary search correctness for all 424 sample terms \\
+8--11 & Lexical & 5 & Heap's law fit, Zipf's law fit, stop word ratios, published benchmarks \\
+13 & Stemmer Unification & 1 & Dialect unification for all 12 test pairs \\
+14a--d & Edge Cases & 27 & Edge cases for tokenizer, galloping, merges, empty query inputs \\
+15 & End-to-End Search & 16 & Whole-pipeline integration, dialect query equivalence \\
+17 & Pipeline Ordering & 5 & Normalization before stem, stop word removal before stem \\
 \midrule
-& \textbf{Total} & \textbf{220} & \\
+& \textbf{Total} & \textbf{277} & \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -624,7 +632,7 @@ Tokens before deduplication & 130,757 \\
 Tokens after deduplication & 76,863 \\
 Deduplication savings & 41.2\% \\
 Binary search seeks per term & 7--14 \\
-Test suite & 220 tests, 12 groups \\
+Test suite & 277 tests, 17 groups \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -663,25 +671,6 @@ Searching index file: output/search-o-SAURS_cran.index
   [AND] Algorithm: two-pointer | Lists: 179 vs 339 (ratio 1.9x) | O(179+339)
 Match count: 49
 Results written to output/results/output.txt
-\end{lstlisting}
-
-%=============================================================================
-\section{How to Run}
-\label{sec:howtorun}
-%=============================================================================
-
-\textbf{Prerequisite}: Python 3.8+ (no external libraries).
-
-\begin{lstlisting}[style=shellstyle,numbers=none]
-# One-command execution (runs all 4 steps):
-chmod +x run_pipeline.sh && ./run_pipeline.sh
-
-# Or step-by-step:
-python search-o-SAURS_preprocess.py           # Step 1: Preprocess
-python search-o-SAURS_indexer.py              # Step 2: Build index
-python search-o-SAURS_search.py "aerodynamic AND experimental" \
-    output/results/output.txt                 # Step 3: Query
-python tests/test_search.py                   # Step 4: Tests
 \end{lstlisting}
 
 %=============================================================================
@@ -727,7 +716,7 @@ The \textbf{search-o-SAURS} system implements a complete Boolean IR pipeline:
   \item \textbf{Search}: File-based binary search (O($\log V$) per term);
         adaptive AND merging with galloping (up to 73$\times$ speedup for
         skewed lists).
-  \item \textbf{Testing}: 220 tests across 12 groups verify correctness from
+  \item \textbf{Testing}: 277 tests across 17 groups verify correctness from
         individual functions to end-to-end queries, including set-theoretic
         invariants and query--document parity.
 \end{itemize}
@@ -747,12 +736,12 @@ with no external dependencies.
 \toprule
 \textbf{File} & \textbf{Lines} & \textbf{Purpose} \\
 \midrule
-\texttt{search-o-SAURS\_preprocess.py} & 454 & Preprocessing pipeline \\
-\texttt{search-o-SAURS\_indexer.py} & 69 & Inverted index builder \\
-\texttt{search-o-SAURS\_search.py} & 434 & Boolean search engine \\
-\texttt{porter.py} & 367 & Porter Stemmer (canonical) \\
-\texttt{tests/test\_search.py} & 720 & Comprehensive test suite (220 tests) \\
-\texttt{run\_pipeline.sh} & 22 & One-command pipeline runner \\
+\texttt{search-o-SAURS\_preprocess.py} & 455 & Preprocessing pipeline \\
+\texttt{search-o-SAURS\_indexer.py} & 70 & Inverted index builder \\
+\texttt{search-o-SAURS\_search.py} & 435 & Boolean search engine \\
+\texttt{porter.py} & 368 & Porter Stemmer (canonical) \\
+\texttt{tests/test\_comprehensive.py} & 1,312 & Comprehensive test suite (277 tests) \\
+\texttt{run\_pipeline.sh} & 46 & One-command pipeline runner \\
 \bottomrule
 \end{tabular}
 \end{table}
