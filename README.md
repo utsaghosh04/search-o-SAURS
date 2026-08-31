@@ -48,7 +48,8 @@ IR_P1/
 |- search-o-SAURS_search.py
 |- search-o-SAURS_pipeline.ipynb
 |- porter.py
-|- README.md
+|- run_pipeline.sh
+|- sample_queries.md
 |- .gitignore
 |- data/
 |  |- cran.all.1400
@@ -61,6 +62,8 @@ IR_P1/
 |  |- results/
 |
 |- tests/
+   |- test_comprehensive.py
+   |- test_sample_queries.py
    |- test_search.py
 ```
 
@@ -74,13 +77,13 @@ IR_P1/
 
 ### Prerequisites
 
-- Python 3.8+ (no external libraries required - fully self-contained)
+- Python 3.8+ (no external libraries required - fully self contained)
 
 
 
 ### Run the Full Pipeline
 
-#### Option A: One-Command Execution (Recommended)
+#### Option A: One Command Execution (Recommended)
 You can execute the entire pipeline (Preprocessing -> Indexing -> Search) using the provided helper script. The script allows you to enter your query interactively, or pass it as an argument. Testing is optional and can be enabled via the `--test` flag:
 ```bash
 chmod +x run_pipeline.sh
@@ -115,7 +118,7 @@ python tests/test_search.py
 ### Or Use the Notebook
 
 Open `search-o-SAURS_pipeline.ipynb` in Jupyter - it runs the complete pipeline in a single notebook with an interactive query cell.
-
+Note: The complete pipeline may take noticeably much longer to execute when run inside Jupyter Notebook compared to running the individual Python scripts directly from the command line. This is primarily due to the overhead associated with the interactive notebook environment created at runtime.
 ---
 
 
@@ -126,7 +129,7 @@ Open `search-o-SAURS_pipeline.ipynb` in Jupyter - it runs the complete pipeline 
                     +------------------------------------------------+
   cran.all.1400 --> |  PREPROCESSING  (search-o-SAURS_preprocess.py) |
                     |                                                |
-                    |  1. Tokenize    (8-stage tokenizer)            |
+                    |  1. Tokenize    (8 stage tokenizer)            |
                     |  2. Normalize   (case fold + British->American)|
                     |  3. Stop Words  (remove 358 stop words)        |
                     |  4. Stem        (Porter stemmer)               |
@@ -153,14 +156,14 @@ Open `search-o-SAURS_pipeline.ipynb` in Jupyter - it runs the complete pipeline 
          ---------->|                                                |
                     |  1. Preprocess query terms (same pipeline)     |
                     |  2. Binary search on index file (O(log V))     |
-                    |  3. AND: two-pointer or galloping merge        |
-                    |     OR:  two-pointer merge                     |
+                    |  3. AND: two pointer or galloping merge        |
+                    |     OR:  two pointer merge                     |
                     |                                                |
                     +----------------+-------------------------------+
                                      |
                                      v
                                results/output.txt
-                         (matching document IDs, one per line)
+               (number of docids; matching document IDs in increasing order)
 ```
 
 ---
@@ -174,11 +177,11 @@ Open `search-o-SAURS_pipeline.ipynb` in Jupyter - it runs the complete pipeline 
 ### Core Pipeline Files
 
 
-| File                           | Lines | Purpose                                                                                                                                                                                                                                                                                                                                                                                         |
-| ------------------------------ | ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `search-o-SAURS_preprocess.py` | 454   | **Preprocessing pipeline.** Parses the Cranfield corpus, then applies a 5-stage pipeline: Tokenize (8-stage tokenizer handling abbreviations, possessives, hyphens, slashes, number-word splits) -> Normalize (case fold + 5-pattern British->American spelling equivalence with exception guards) -> Stop word removal -> Porter stemming -> Deduplication. Outputs `search-o-SAURS_processed.all`. |
-| `search-o-SAURS_indexer.py`    | 69    | **Index builder.** Reads the preprocessed file, builds an inverted index as a sorted flat file. Each line: `token df docid1,docid2,...`. First line: `vocab_size, max_docid`. The df (document frequency) field enables search-time optimizations.                                                                                                                                              |
-| `search-o-SAURS_search.py`     | 435   | **Boolean search engine.** Implements binary search directly on the sorted index file (O(log V) seeks via buffered backward scan in binary mode). For AND queries, adaptively selects between two-pointer merge (O(n+m)) and galloping search (O(k*log(n/k))) based on postings list size ratio. Query terms are preprocessed with the identical normalization+stemming pipeline as documents.  |
+| File                           | Purpose                                                                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `search-o-SAURS_preprocess.py` | **Preprocessing pipeline.** Parses the Cranfield corpus, then applies a 5-stage pipeline: Tokenize (8-stage tokenizer handling abbreviations, possessives, hyphens, slashes, number-word splits) -> Normalize (case fold + 5-pattern British->American spelling equivalence with exception guards) -> Stop word removal -> Porter stemming -> Deduplication. Outputs `search-o-SAURS_processed.all`. |
+| `search-o-SAURS_indexer.py`    | **Index builder.** Reads the preprocessed file, builds an inverted index as a sorted flat file. Each line: `token df docid1,docid2,...`. First line: `vocab_size, max_docid`. The df (document frequency) field enables search-time optimizations.                                                                                                                                              |
+| `search-o-SAURS_search.py`     | **Boolean search engine.** Implements binary search directly on the sorted index file (O(log V) seeks via buffered backward scan in binary mode). For AND queries, adaptively selects between two-pointer merge (O(n+m)) and galloping search (O(k*log(n/k))) based on postings list size ratio. Query terms are preprocessed with the identical normalization+stemming pipeline as documents.  |
 
 
 
@@ -192,7 +195,7 @@ Open `search-o-SAURS_pipeline.ipynb` in Jupyter - it runs the complete pipeline 
 | `stopwords.txt`                 | 358 stop words used for filtering (in `data/`).                                                                           |
 | `cran.all.1400`                 | The Cranfield collection (in `data/`).                                                                                    |
 | `search-o-SAURS_pipeline.ipynb` | Self-contained Jupyter notebook that runs the entire pipeline.                                                            |
-| `test_search.py`                | Comprehensive test suite with **220 tests** (in `tests/`).                                                                |
+| `test_comprehensive.py`         | Comprehensive test suite with **277 tests** (in `tests/`).                                                                |
 
 
 
@@ -358,7 +361,7 @@ Each index line includes the document frequency: `token df docid1,docid2,...`. T
 Run the comprehensive test suite:
 
 ```bash
-python3 tests/test_search.py
+python3 tests/test_comprehensive.py
 ```
 
 Validate the documented sample queries after building the index:
@@ -371,27 +374,34 @@ The validator compares both the count and full postings list for AND queries. Fo
 
 
 
-### Test Coverage: 220 tests across 12 groups
+### Test Coverage: 277 tests across 17 groups
 
 
-| Group                | Tests | What It Validates                                                                    |
-| -------------------- | ----- | ------------------------------------------------------------------------------------ |
-| 1. Tokenization      | 15    | Abbreviations, possessives, hyphens, slashes, number-word splits, noise, edge cases  |
-| 2. Normalization     | 25    | Case folding, all 5 British->American patterns, all exception guards, min-length      |
-| 3. Stop Words        | 4     | Removal correctness, empty input, all-stop-words                                     |
-| 4. Stemming          | 9     | Porter stemmer on key corpus terms                                                   |
-| 5. Deduplication     | 4     | Order preservation, identity, all-same, empty                                        |
-| 6. Query<->Doc Parity  | 26    | Exact normalization+stemming match between query and document pipelines              |
-| 7. Index Correctness | 8     | Header, lexicographic sort, df accuracy, sorted postings, no duplicates, spot checks |
-| 8. Binary Search     | 55    | Stratified sample across alphabet + boundary + nonexistent terms                     |
-| 9. AND/OR Merges     | 24    | Gallop search unit tests, AND/OR vs set operations, edge cases                       |
-| 10. End-to-End       | 13    | Raw queries -> correct results, British spelling queries, missing terms               |
-| 11. Spot Checks      | 8     | Specific document membership, BritishAmerican equivalence, commutativity            |
-| 12. Invariants       | 30    | `|AANDB| <= min(|A|,|B|)`, `|AORB| >= max(|A|,|B|)`, inclusion-exclusion, membership      |
-
+| Group                            |   Tests | What It Validates                                                                                                             |
+| -------------------------------- | ------: | ----------------------------------------------------------------------------------------------------------------------------- |
+| **1. Cranfield Parsing**         |  **10** | Field markers (`.I`, `.T`, `.W`), document ID ranges, and text extraction bounds                                              |
+| **2a. Tokenization**             |  **17** | Basic tokenization, abbreviations, possessives, hyphens, slashes, number handling, and noise filtering                        |
+| **2b. Normalization**            |  **32** | British--American spelling patterns, exception guards, and case folding                                                       |
+| **2c. Stop-Word Removal**        |  **14** | Stop-word exclusions and preservation of meaningful search terms                                                              |
+| **2d. Stemming**                 |  **16** | Porter stemmer correctness using 75 canonical test vectors                                                                    |
+| **2e. Deduplication**            |   **5** | Presence-only mapping and preservation of first-occurrence ordering                                                           |
+| **2f. Pipeline Integration**     |  **16** | Correct integration and interaction of all preprocessing stages on known documents                                            |
+| **3a. Processed File Format**    |   **2** | PA1 specification tags (`.I` and `.S`) and document counts                                                                    |
+| **3b. Index File Format**        |  **10** | Lexicographic term sorting, ascending document ID order, and document-frequency (`df`) accuracy                               |
+| **4. Index/Corpus Consistency**  |   **2** | Forward (index → document) and reverse (document → index) consistency                                                         |
+| **5a. AND/OR Merges**            |  **16** | Correctness of two-pointer and galloping posting-list merge algorithms                                                        |
+| **5b. Boolean Algebra Laws**     |  **18** | Commutativity, identity, and zero laws for Boolean intersections and unions                                                   |
+| **5c. Set-Theoretic Invariants** |  **20** | Set bounds, inclusion--exclusion, and set-membership properties                                                               |
+| **6. Query--Document Parity**    |  **44** | Identical query and document preprocessing and dialect stem unification across 10 spelling pairs                              |
+| **7. Exhaustive Search**         |   **1** | Complete binary-search correctness across all 424 sampled vocabulary terms                                                    |
+| **8--11. Lexical Analysis**      |   **5** | Heap's law fit, Zipf's law fit, stop-word ratios, and comparison with published benchmarks                                    |
+| **13. Stemmer Unification**      |   **1** | British--American dialect unification across all 12 test pairs                                                                |
+| **14a--d. Edge Cases**           |  **27** | Edge cases for tokenization, galloping search, posting-list merges, and empty query inputs                                    |
+| **15. End-to-End Search**        |  **16** | Complete pipeline integration, query correctness, and dialect-equivalent query results                                        |
+| **17. Pipeline Ordering**        |   **5** | Correct ordering constraints: normalization before stemming and stop-word removal before stemming                             |
+| **Total**                        | **277** | Comprehensive validation across parsing, preprocessing, indexing, retrieval, lexical analysis, and end-to-end system behavior |
 
 ---
-
 
 
 ## Statistics
@@ -406,4 +416,4 @@ The validator compares both the count and full postings list for AND queries. Fo
 | Total tokens after dedup           | 76,863                 |
 | Deduplication savings              | 41.2%                  |
 | Binary search seeks per query term | 7-14 (vs 4,183 linear) |
-| Test coverage                      | 220 tests, 12 groups   |
+| Test coverage                      | 277 tests, 17 groups   |
