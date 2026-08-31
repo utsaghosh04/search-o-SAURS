@@ -38,6 +38,7 @@ python3 search-o-SAURS_search.py "$QUERY" output/results/output.txt
 if [ "$RUN_TESTS" = true ]; then
     echo "=== Step 4: Running the test suite ==="
     python3 tests/test_comprehensive.py
+    python3 tests/test_sample_queries.py
 else
     echo "=== Step 4: Skipping test suite (use --test to run) ==="
 fi
