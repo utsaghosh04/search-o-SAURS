@@ -33,7 +33,7 @@ python3 search-o-SAURS_indexer.py
 
 echo "=== Running a Boolean query ==="
 echo "Query: $QUERY"
-python3 search-o-SAURS_search.py "$QUERY" output/results/output.txt
+python3 search-o-SAURS_search.py "$QUERY" output/output.txt
 
 if [ "$RUN_TESTS" = true ]; then
     echo "=== Running the test suite ==="

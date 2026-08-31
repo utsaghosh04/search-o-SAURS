@@ -317,7 +317,7 @@ def preprocess_query_term(term):
 def main():
     if len(sys.argv) < 3:
         print("Usage: python3 search-o-SAURS_search.py \"<Query>\" <Output_File_Path> [Index_File_Path]", file=sys.stderr)
-        print("Example: python3 search-o-SAURS_search.py \"aerodynamic AND experimental\" output/results/out.txt", file=sys.stderr)
+        print("Example: python3 search-o-SAURS_search.py \"aerodynamic AND experimental\" output/output.txt", file=sys.stderr)
         sys.exit(1)
 
     query_str = sys.argv[1]
