@@ -95,6 +95,13 @@ IR_P1/
 
 ### Run the Full Pipeline
 
+#### Option A: One-Command Execution (Recommended)
+You can execute the entire pipeline (Preprocessing → Indexing → Sample Query → Tests) using the provided helper script:
+```bash
+chmod +x run_pipeline.sh && ./run_pipeline.sh
+```
+
+#### Option B: Step-by-Step Execution
 ```bash
 # Step 1: Preprocess the corpus
 python search-o-SAURS_preprocess.py
@@ -357,7 +364,7 @@ Each index line includes the document frequency: `token df docid1,docid2,...`. T
 Run the comprehensive test suite:
 
 ```bash
-python tests/test_search.py
+python3 tests/test_search.py
 ```
 
 
