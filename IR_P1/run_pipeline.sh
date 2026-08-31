@@ -19,28 +19,28 @@ while [[ "$#" -gt 0 ]]; do
 done
 
 if [ -z "$QUERY" ]; then
-    read -p "Enter your Boolean query (default: 'aerodynamic AND experimental'): " QUERY
+    read -p "Enter your Boolean query (default: 'aeroelastic AND aircraft'): " QUERY
     if [ -z "$QUERY" ]; then
-        QUERY="aerodynamic AND experimental"
+        QUERY="aeroelastic AND aircraft"
     fi
 fi
 
-echo "=== Step 1: Preprocessing the corpus ==="
+echo "=== Preprocessing the corpus ==="
 python3 search-o-SAURS_preprocess.py
 
-echo "=== Step 2: Building the inverted index ==="
+echo "=== Building the inverted index ==="
 python3 search-o-SAURS_indexer.py
 
-echo "=== Step 3: Running a Boolean query ==="
+echo "=== Running a Boolean query ==="
 echo "Query: $QUERY"
 python3 search-o-SAURS_search.py "$QUERY" output/results/output.txt
 
 if [ "$RUN_TESTS" = true ]; then
-    echo "=== Step 4: Running the test suite ==="
+    echo "=== Running the test suite ==="
     python3 tests/test_comprehensive.py
     python3 tests/test_sample_queries.py
 else
-    echo "=== Step 4: Skipping test suite (use --test to run) ==="
+    echo "=== Skipping test suite (use --test to run) ==="
 fi
 
-echo "=== Pipeline execution finished successfully! ==="
+echo "=== Pipeline execution finished ==="
