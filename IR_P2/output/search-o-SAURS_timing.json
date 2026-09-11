@@ -1,0 +1,16 @@
+{
+  "backend": "pyterrier-terrier",
+  "documents": 1400,
+  "queries": 225,
+  "relevance_judgments": 1837,
+  "indexing_seconds": 1.8735456310096197,
+  "evaluation_seconds": 11.879944465996232,
+  "best_model_search_seconds": 1.960743256000569,
+  "best_model": "TF_IDF_c_0.75",
+  "models": [
+    "TF_IDF_c_0.25",
+    "TF_IDF_c_0.5",
+    "TF_IDF_c_0.75",
+    "TF_IDF_c_1.0"
+  ]
+}

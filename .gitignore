@@ -1,2 +1,6 @@
 __pycache__/
 *.pyc
+venv/
+IR_P2/search-o-SAURS_index/
+IR_P2/output/search-o-SAURS_index/
+
