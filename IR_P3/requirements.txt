@@ -1,0 +1,3 @@
+# PA3 explicitly permits SVM libraries. Used only for linear-SVM training.
+# Its transitive dependencies are installed by pip; our code does not import them.
+scikit-learn>=1.3,<2

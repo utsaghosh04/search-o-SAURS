@@ -1,0 +1,135 @@
+.I 2
+.W
+what are the structural and aeroelastic problems associated with flight of high speed aircraft .
+.I 7
+.W
+is it possible to relate the available pressure distributions for an ogive forebody at zero angle of attack to the lower surface pressures of an equivalent ogive forebody at angle of attack .
+.I 8
+.W
+what methods -dash exact or approximate -dash are presently available for predicting body pressures at angle of attack.
+.I 9
+.W
+papers on internal /slip flow/ heat transfer studies .
+.I 23
+.W
+what progress has been made in research on unsteady aerodynamics .
+.I 24
+.W
+what are the factors which influence the time required to invert large structural matrices .
+.I 27
+.W
+how is the design of ring or part ring wings by linear theory affected by thickness .
+.I 29
+.W
+what is the effect of cross sectional shape on the flow over simple delta wings with sharp leading edges .
+.I 36
+.W
+has anyone investigated relaxation effects on gaseous heat transfer to a suddenly heated wall .
+.I 40
+.W
+how can one detect transition phenomena in hypersonic wakes .
+.I 41
+.W
+has anyone investigated and developed a simple model for the vortex wake behind a cruciform wing .
+.I 51
+.W
+what is the available information pertaining to boundary layers on very slender bodies of revolution in continuum flow (the ?transverse curvature  effect) .
+.I 56
+.W
+to what extent can readily available steady-state aerodynamic data be utilized to predict lifting-surface flutter characteristics .
+.I 57
+.W
+what are the significant steady and non-steady flow characteristics which affect the flutter mechanism .
+.I 58
+.W
+is it possible to determine rates of forced convective heat transfer from heated cylinders of non-circular cross-section,  (the fluid flow being along the generators) .
+.I 60
+.W
+is there any simple,  but practical,  method for numerical integration of the mixing problem (i.e. the blasius problem with three-point boundary conditions) .
+.I 63
+.W
+where can i find pressure data on surfaces of swept cylinders .
+.I 71
+.W
+experimental results on hypersonic viscous interaction .
+.I 72
+.W
+what has been done about viscous interactions in relatively low reynolds number flows,  particularly at high mach numbers .
+.I 87
+.W
+what effect has the boundary layer in modifying the basic inviscid flow behind the shock,  neglecting effects of leading edge and corner .
+.I 88
+.W
+how does a satellite orbit contract under the action of air drag in an atmosphere in which the scale height varies with altitude .
+.I 108
+.W
+what data is there on the fatigue of structures under acoustic loading .
+.I 109
+.W
+panels subjected to aerodynamic heating .
+.I 115
+.W
+is the problem of similarity for representative investigations of aeroelastic effects in heated flow as intractable as previous investigations imply .
+.I 130
+.W
+what are the flutter characteristics of the exposed skin panels of the x-15 vertical stabilizer when subjected to aerodynamic heating .
+.I 140
+.W
+what are the discontinuity stresses at junctions in pressurized structures .
+.I 144
+.W
+can studies of pure membrane cylinders having no wall bending stiffness but maintaining their shape by virtue of internal pressure provide any insight into the behaviour of pressurized cylinders with finite wall stiffness .
+.I 151
+.W
+what is the best theoretical method for calculating pressure on the surface of a wing alone .
+.I 152
+.W
+how can the effect of the boundary-layer on wing pressure be calculated, and what is its magnitude .
+.I 155
+.W
+technical report on measurement of ablation during flight .
+.I 164
+.W
+what determines the onset of shock-induced boundary-layer separation .
+.I 167
+.W
+exact solution methods for calculating the ablative mass loss of a material ablating at high temperatures in a hypersonic flight environment .
+.I 174
+.W
+obtain all papers and reports that contain shock detachment distance data .
+.I 179
+.W
+has a theory of quasi-conical flows been developed, in supersonic linearised theory, for which the upwash distribution on the lifting surface, apart from being a homogeneous function in the co-ordinate, is permitted to have a quite general functional form .
+.I 180
+.W
+how does scale height vary with altitude in an atmosphere .
+.I 184
+.W
+work on small-oscillation re-entry motions .
+.I 189
+.W
+is there a design method for calculating thermal fatigue endurances of components of various types and sizes in a variety of circumstances .
+.I 190
+.W
+will an analysis of panel flutter based on arbitrarily assumed modes of deformation prove satisfactory,  and if so,  what is the minimum number of modes that need be considered .
+.I 191
+.W
+what is the criterion for true panel flutter,  as opposed to small amplitude vibration arising from acoustic disturbances .
+.I 206
+.W
+how do subsonic and transonic flutter data measured in the new langley transonic dynamics tunnel compare with similar data obtained in other facilities .
+.I 210
+.W
+has anyone analytically investigated the stabilizing influence of soft elastic cores on the buckling strength of cylindrical shells subjected to non-uniform external pressure .
+.I 213
+.W
+what is the effect on cylinder buckling of a circumferential stress system that varies in the axial direction .
+.I 216
+.W
+what investigations have been made of the wave system created by a static pressure distribution over a liquid surface .
+.I 222
+.W
+has anyone investigated the shear buckling of stiffened plates .
+.I 223
+.W
+papers on shear buckling of unstiffened rectangular plates under shear .
