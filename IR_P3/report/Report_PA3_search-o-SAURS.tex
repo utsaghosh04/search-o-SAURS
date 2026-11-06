@@ -1,492 +1,712 @@
+% Compile twice with pdflatex to resolve the contents and page references.
+% Figures are inline TikZ drawings. No external assets or font files are needed.
 \documentclass[12pt,a4paper]{article}
 \usepackage[margin=1in]{geometry}
 \usepackage[T1]{fontenc}
-\usepackage{lmodern}
-\usepackage{amsmath,amssymb,booktabs,array,tabularx}
-\usepackage{graphicx,xcolor,float}
-\usepackage{fancyhdr,enumitem,listings}
-\usepackage{tikz,pgfplots}
-\usetikzlibrary{arrows.meta,positioning,shapes.geometric}
-\pgfplotsset{compat=1.18}
-\usepackage[colorlinks=true,linkcolor=black,urlcolor=blue]{hyperref}
-\hypersetup{pdftitle={Programming Assignment III: Learning to Rank},pdfauthor={search-o-SAURS}}
+\usepackage{tikz}
+\usepackage{microtype}\DisableLigatures{encoding=*,family=*}
+\usepackage{booktabs,tabularx,array,graphicx,fancyhdr}
+\usepackage[colorlinks=true,linkcolor=blue,urlcolor=blue]{hyperref}
 \setlength{\headheight}{15pt}
-\pagestyle{fancy}
-\fancyhf{}
-\fancyhead[L]{\small search-o-SAURS}
-\fancyhead[R]{\small Programming Assignment III}
-\fancyfoot[C]{\thepage}
-\setlength{\parindent}{0pt}
-\setlength{\parskip}{4pt}
-\setlist[itemize]{leftmargin=1.5em,itemsep=2pt,topsep=3pt}
-\setlist[enumerate]{leftmargin=1.8em,itemsep=2pt,topsep=3pt}
-\renewcommand{\arraystretch}{1.16}
-\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
-\definecolor{zoneblue}{HTML}{4B538F}
-\definecolor{svmteal}{HTML}{267C79}
-\definecolor{paleblue}{HTML}{EAE9F5}
-\lstset{basicstyle=\ttfamily\small,breaklines=true,columns=fullflexible,keepspaces=true,
-  frame=single,rulecolor=\color{gray!45},xleftmargin=3pt,xrightmargin=3pt}
-\input{report_data.tex}
-
+\setlength{\parindent}{17.56pt}\setlength{\parskip}{0pt}
+\pagestyle{fancy}\fancyhf{}\fancyhead[L]{\small search-o-SAURS}\fancyhead[R]{\small Programming Assignment III}\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.4pt}
 \begin{document}
-\hypersetup{pageanchor=false}
-\begin{titlepage}
-\centering
-\vspace*{1.65cm}
-{\Large\bfseries Information Retrieval\par}
-\vspace{0.12cm}
-{\large\bfseries Programming Assignment III\par}
-\vspace{1.65cm}
-{\LARGE\bfseries Learning to Rank Documents\par}
-\vspace{0.3cm}
-{\large\itshape on the Cranfield Aeronautics Corpus\par}
-\vspace{1.5cm}
-{\large\bfseries Group: search-o-SAURS\par}
-\vspace{1.25cm}
-\begin{tabular}{lr}
-\toprule
-\textbf{Name} & \textbf{Roll Number} \\
-\midrule
-Utsa Ghosh & \texttt{23CS10090} \\
-Antariksh Das & \texttt{23CS10086} \\
-Raktim Kundu & \texttt{23CS30044} \\
-Souhardya Dandapat & \texttt{23CS30054} \\
-Sharanya Baidya & \texttt{23CS30064} \\
-\bottomrule
-\end{tabular}
-\vfill
-{\bfseries Implementation, Experiments and Results\par}
-\vspace{0.25cm}
-{\small Boolean Weighted Zones and Linear Support Vector Machines\par}
-\vspace*{0.9cm}
+\begin{titlepage}\centering\vspace*{1.65cm}
+{\LARGE\bfseries Information Retrieval}\par\medskip
+{\Large\bfseries Programming Assignment III}\par\vspace{2cm}
+{\Huge\bfseries Learning to Rank Documents}\par\medskip
+{\Huge\bfseries with Boolean Zones and a Linear SVM}\par\medskip
+{\Large\itshape for the Cranfield Aeronautics Corpus}\par\vspace{1.65cm}
+{\Large\bfseries Group: search-o-SAURS}\par\vspace{1.65cm}
+\begin{tabular}{lr}\toprule\textbf{Name} & \textbf{Roll Number} \\\midrule
+\textbf{Utsa Ghosh} & 23CS10090 \\
+\textbf{Antariksh Das} & 23CS10086 \\
+\textbf{Raktim Kundu} & 23CS30044 \\
+\textbf{Souhardya Dandapat} & 23CS30054 \\
+\textbf{Sharanya Baidya} & 23CS30064 \\
+\bottomrule\end{tabular}\vfill
+{\large\bfseries Project Repository}\par\medskip
+\url{https://github.com/utsaghosh04/search-o-SAURS/tree/main/IR_P3}
 \end{titlepage}
+\pagenumbering{arabic}\tableofcontents\clearpage
+\section{Problem statement and approach}
+Programming Assignment III asks us to learn two ranking functions for the Cranfield collection. Method A learns weights for Boolean matches in the title, author, bibliography and body. Method B learns a linear SVM using the 22 specified query-document features. We evaluate the ranked lists using precision, recall and F1, and retain the learned parameters so that the same models can answer further queries.
 
-\pagenumbering{arabic}
-\hypersetup{pageanchor=true}
-\tableofcontents
-\clearpage
+Both methods use the same collection and query partitions. Method A reduces each query-document pair to four field matches and learns a weighted sum. Method B uses term coverage, frequency summaries and retrieval scores as inputs to a linear classifier. Documents are ordered by the resulting score. This gives a direct comparison between a compact field-based representation and a richer feature vector.
 
-\section{Introduction}
-This report describes the learning-to-rank system developed by group
-\textbf{search-o-SAURS} for Programming Assignment III. The task is to order
-Cranfield documents by their estimated relevance to a query, using the supplied
-human relevance judgments to learn the ranking parameters.
+Training and prediction are separate. We first fit the models using judged queries and select their operating settings on validation queries. Prediction then loads those parameters and ranks the collection for a new request. Judgments are needed only if the returned list is to be evaluated.
 
-Two methods are implemented. Method A learns four weights for Boolean matches
-in the title, author, bibliography and text body. Method B learns a real-valued
-linear score over the assignment's 22 query-document features using a support
-vector machine (SVM). Both methods are evaluated on the same held-out queries
-using precision, recall and F1. Saved weights also support new queries without
-retraining.
+\subsection{Implementation choices}
+We use scikit-learn to fit the linear SVM, as permitted by PA3. Record parsing, tokenization, feature calculation, scaling, grid search, ranking and evaluation use the Python standard library. Both models use lowercase alphanumeric tokens without stemming or stopword removal.
 
-\section{Assignment Requirements}
-The programming requirements are addressed as follows:
-\begin{enumerate}
-\item Use the Cranfield collection and its provided relevance judgments.
-\item Learn individual field weights for Boolean weighted zone scoring and use
-      the weighted score to produce a ranked document list.
-\item Train a \emph{linear} SVM using every feature listed in PA3.
-\item Evaluate test-query result lists with precision, recall and F1.
-\item Supply source programs, test rankings as text, and an implementation and
-      experiment report; support further unknown test queries.
-\end{enumerate}
-PA3 permits SVM libraries and NLP tools. Only SVM fitting uses scikit-learn;
-parsing, features, scaling, search, metrics, storage and tests use Python's
-standard library. The statement does not fix feature formulas, preprocessing,
-split proportions or retrieval cutoffs. Our choices are stated explicitly below.
+The problem statement names the features but leaves their formulas, preprocessing, query split and retrieval cutoffs open. We specify these choices in the report and use them consistently in training and prediction. Sections 7 and 8 give the complete feature definitions.
 
-\section{Dataset and Relevance Judgments}
-\begin{table}[H]\centering\small
-\caption{Statistics of the supplied collection after our tokenization.}
-\begin{tabular}{lr}\toprule
-Quantity & Value \\\midrule
-Documents / queries & 1,400 / 225 \\
-Judgments / positive judgments & 1,837 / 1,612 \\
-Grade $-1$ judgments & 225 \\
-Tokens / distinct vocabulary terms & \CorpusTokens{} / \CorpusVocabulary{} \\
-Mean stream length / empty streams & \AverageLength{} / 2 \\
-\bottomrule\end{tabular}\end{table}
-Binary evaluation maps grades 1--4 to relevant and grade $-1$, 0, 5 or unjudged
-pairs to nonrelevant. Document IDs are preserved. Qrels use a query's one-based
-position in \texttt{cran.qry}, not its source \texttt{.I}: source IDs 1, 2, 4, 8
-map to qrel IDs 1, 2, 3, 4.
+\subsection{Comparisons in this report}
+The main experiment divides the 225 queries into 135 training, 45 validation and 45 test queries. The test partition is shared by both methods. We compare their selected operating points and also examine fixed-model rankings at identical cutoffs.
 
-\clearpage
-\section{System Architecture and Preprocessing}
-\begin{figure}[H]\centering
-\begin{tikzpicture}[
-  node distance=0.43cm and 0.55cm,
-  box/.style={draw=gray,rounded corners=2pt,align=center,font=\small,
-              minimum height=0.8cm,text width=5.3cm},
-  smallbox/.style={box,text width=4.6cm},
-  arrow/.style={-{Stealth[length=2mm]},thin}]
-\node[box,fill=paleblue] (input) {Cranfield documents, queries and judgments};
-\node[box,below=of input] (parse) {Parse four fields and align query IDs};
-\node[box,below=of parse] (tokens) {Shared tokenization and corpus statistics};
-\node[box,below=of tokens,fill=paleblue] (split) {Query-level training / validation / test split};
-\node[smallbox,below left=0.55cm and -0.15cm of split] (zone) {Method A\\Four Boolean field matches\\Grid-search weights};
-\node[smallbox,below right=0.55cm and -0.15cm of split] (svm) {Method B\\22 features and scaling\\Linear SVM};
-\node[box,below=2.8cm of split] (select) {Select cutoffs and SVM C on validation queries};
-\node[box,below=of select] (test) {Rank untouched test queries and evaluate P/R/F1};
-\node[box,below=of test,fill=paleblue] (outputs) {Text weights, rankings, metrics and test evidence};
-\draw[arrow] (input)--(parse);\draw[arrow] (parse)--(tokens);\draw[arrow] (tokens)--(split);
-\draw[arrow] (split.south)--++(0,-0.2)-|(zone.north);
-\draw[arrow] (split.south)--++(0,-0.2)-|(svm.north);
-\draw[arrow] (zone.south)|-(select.west);\draw[arrow] (svm.south)|-(select.east);
-\draw[arrow] (select)--(test);\draw[arrow] (test)--(outputs);
-\end{tikzpicture}
-\caption{Training and evaluation pipeline. Test labels never select parameters.}
-\end{figure}
-\begin{table}[H]\centering\small
-\caption{Program responsibilities in the standalone source directory.}
-\begin{tabularx}{\linewidth}{lY}\toprule
-File in \texttt{src/} & Responsibility \\\midrule
-\texttt{data.py} & Parse records, tokenize and build collection statistics. \\
-\texttt{features.py} & Compute all 22 query-document features. \\
-\texttt{zone\_model.py} & Learn and apply Boolean field weights. \\
-\texttt{svm\_model.py} & Scale features, fit SVM and export coefficients. \\
-\texttt{metrics.py} & Per-query, macro and micro precision/recall/F1. \\
-\texttt{train.py}, \texttt{predict.py} & Run the experiment; apply saved models to new queries. \\
+A separate development study compares the SVM with BM25 and TF-IDF cosine. It uses only the 180 training and validation queries. Regression checks cover the calculations and data flow; retrieval quality is measured from the judged result lists. The two sets of evidence are reported separately.
+
+\section{Collection, judgments and query identifiers}
+The collection contains 1,400 document records, 225 queries and relevance judgments. Each document starts with .I and has title (.T), author (.A), bibliography (.B) and body (.W) sections. Queries contain .I and .W sections. Each judgment gives a query ID, a document ID and a relevance grade.
+
+\begin{table}[htbp]\centering\small
+\caption{Statistics of the supplied Cranfield collection.}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Quantity} & \textbf{Value} \\\midrule
+Documents & 1400 \\
+Queries & 225 \\
+Judgment records & 1837 \\
+Relevant judgments, grades 1-4 & 1612 \\
+Grade -1 records & 225 \\
+All-field tokens & 256,861 \\
+Distinct terms & 9,422 \\
+Mean stream length & 183.472 \\
+Empty streams & 471, 995 \\
 \bottomrule\end{tabularx}\end{table}
-Tokenization lowercases text and extracts ASCII alphanumeric sequences. No
-stemming, stopword removal or deduplication is applied; Method B retains
-frequencies. Queries and fields use identical preprocessing. Repeated sections
-are concatenated, and missing fields remain empty. The SVM defaults to all fields;
-\texttt{--stream body} selects only the body. Empty queries return no results.
+The counts above use all four fields after tokenization. Documents 471 and 995 have empty streams. We retain both documents and define their length-normalized features and cosine values as zero.
 
-\clearpage
-\section{Method A: Boolean Weighted Zone Scoring}
-\subsection{Boolean Inputs and Ranking Score}
-Let $Q$ contain the distinct processed query terms, and let $Z_z(d)$ be the term
-set of document $d$ in zone $z$. For each of the four fields, default disjunctive
-matching gives
-\begin{equation}
- s_z(q,d)=\begin{cases}1,&Q\cap Z_z(d)\ne\varnothing,\\0,&\text{otherwise.}\end{cases}
- \qquad S_A(q,d)=\sum_{z\in\{T,A,B,W\}}w_zs_z(q,d).
-\end{equation}
-The constraints are $w_z\geq0$ and $\sum_z w_z=1$. Consequently scores lie in
-$[0,1]$. An optional conjunctive mode requires every distinct query term to
-occur in the same field; an empty query still scores zero. The reported experiment
-uses disjunctive matching, as recorded in the saved parameters.
+\subsection{Relevance conversion}
+Grades 1 through 4 become positive labels; grade 1 is the strongest relevance grade. Grade -1, 0, 5 and unjudged pairs become negative labels. The supplied file contains 225 grade -1 records and no grade 5 records. The SVM learns binary relevance rather than the numerical grade.
 
-\subsection{Learning the Four Weights}
-An exhaustive simplex grid uses weights in increments of $0.1$. Nonnegative
-integer allocations $a+b+c+d=10$ yield
-\[
- \binom{10+4-1}{4-1}=286
-\]
-candidate vectors. For each vector, the program ranks the training queries and
-maximizes their mean per-query F1 at cutoff 10. An equal training score retains
-the first enumerated vector. The learned weights are:
-\begin{table}[H]\centering
-\caption{Learned field weights from the 135 training queries.}
-\begin{tabular}{lrrrr}\toprule
-Field & Title & Author & Bibliography & Body \\\midrule
-Weight & 0.3 & 0.1 & 0.2 & 0.4 \\
-\bottomrule\end{tabular}\end{table}
-Training macro F1 at 10 is $0.010520$. With weights fixed, validation queries
-select the final cutoff from $\{5,10,15,20,30\}$. The selected cutoff is 30,
-with validation macro F1 $0.005432$. The held-out test set is not consulted.
+This conversion groups different degrees of relevance together. It also counts unjudged documents as negative, although some may be useful. Precision and recall therefore refer to the known relevant sets in the supplied judgments. The example tables show the original grades where available.
 
-\subsection{Implementation and Ties}
-Only 16 distinct four-field Boolean patterns exist. Grid evaluation caches results
-only when pattern ordering, score ties and positive-score membership all agree.
-This avoids repeated evaluation without changing the search objective. The tests
-compare the optimized search with a separate exhaustive implementation over all
-patterns, including ties and zero weights.
+\subsection{Aligning queries with judgments}
+The query IDs need particular care. The judgments use each query's one-based position in the original query file, while the source .I values have gaps. Source IDs 1, 2, 4 and 8 consequently map to judgment IDs 1, 2, 3 and 4. Using the source IDs directly would attach some queries to the wrong judgments.
 
-Zero scores are excluded. Grid sums are rounded to 12 places, and ties use
-ascending document ID in training and inference alike. Common unfiltered terms
-make many fields match, limiting discrimination; no secondary score conceals this.
+Training uses the position-based IDs and records their correspondence with the source IDs. Saved test queries already contain the position-based IDs. New query files preserve explicit IDs. Section 17 shows how to choose the ID convention when evaluating the original queries.
 
-\clearpage
-\section{The 22 Query-Document Features}
-For Method B, let $f_t=\mathrm{tf}(t,d)$, $L_d$ be document stream length and $N$
-the document count. Define smoothed IDF and the query term frequency by
-\[
- g_t=1+\ln\frac{N+1}{\mathrm{df}(t)+1},\qquad c_t=\mathrm{tf}(t,q).
-\]
-All term statistics below range over distinct query terms $Q$, including zeros for
-absent terms. Write $\operatorname{stat}(v)$ for sum, minimum, maximum, mean and
-population variance, in that order. This fixes the assignment's unspecified
-statistical conventions.
-\begin{table}[H]\centering\small
-\caption{Complete feature vector, in assignment and implementation order.}
-\begin{tabularx}{\linewidth}{r l Y}\toprule
-No. & Feature & Definition \\\midrule
-1 & Query term number & $\sum_{t\in Q}c_t$, including repeated query tokens. \\
-2 & Query term ratio & $|\{t\in Q:f_t>0\}|/|Q|$. \\
-3 & Stream length & $L_d$, counting all processed tokens. \\
-4 & IDF & $\sum_{t\in Q:f_t>0}g_t$. \\
-5 & TF sum & $\sum_{t\in Q} f_t$. \\
-6 & TF minimum & $\min_{t\in Q} f_t$. \\
-7 & TF maximum & $\max_{t\in Q} f_t$. \\
-8 & TF mean & $|Q|^{-1}\sum_{t\in Q} f_t$. \\
-9 & TF variance & $|Q|^{-1}\sum_{t\in Q}(f_t-\bar f)^2$. \\
-10--14 & Normalized TF & $\operatorname{stat}(f_t/L_d)$. \\
-15--19 & TF-IDF & $\operatorname{stat}(f_tg_t)$. \\
-20 & Boolean model & 1 iff every distinct query term occurs in the stream. \\
-21 & Vector space model & Cosine of raw-TF $\times$ smoothed-IDF vectors. \\
-22 & BM25 & Saturated TF and length-normalized score below. \\
-\bottomrule\end{tabularx}\end{table}
-The VSM document norm uses the full document vocabulary, while the dot product
-uses query terms. Query weights retain repetitions:
-\[
- \operatorname{VSM}(q,d)=
- \frac{\sum_{t\in Q}(f_tg_t)(c_tg_t)}
- {\sqrt{\sum_{u\in d}(\mathrm{tf}(u,d)g_u)^2}
-  \sqrt{\sum_{t\in Q}(c_tg_t)^2}}.
-\]
-BM25 sums once per distinct query term, with $k_1=1.2$, $b=0.75$:
-\[
- \operatorname{BM25}(q,d)=\sum_{t\in Q}
- \ln\!\left(1+\frac{N-\mathrm{df}(t)+0.5}{\mathrm{df}(t)+0.5}\right)
- \frac{f_t(k_1+1)}{f_t+k_1(1-b+bL_d/\overline L)}.
-\]
-Zero-length streams have normalized TF zero; zero-norm cosine is zero. An unseen
-term has $\mathrm{df}=0$ and document TF zero. Empty-query features are zero except
-stream length, and the ranking API returns an empty result list. The default SVM
-ranks all documents; a nonempty out-of-vocabulary query may still receive scores
-through query-independent stream length. Lexical-only candidates are optional.
+\section{Implementation overview}
+The two rankers share document preparation and query processing. Their learning stages differ: one fits four field weights, while the other fits a linear function over 22 features. Figure 1 follows these stages through model selection, test evaluation and later prediction.
 
-\clearpage
-\section{Method B: Learning Real-Valued SVM Weights}
-\subsection{Training and Exporting the Score}
-Every training query is paired with all 1,400 documents. Positive judgments become
-class 1; other pairs become class 0. Each feature is standardized using only the
-training pairs: $z_j=(x_j-\mu_j)/\sigma_j$, with scale 1 for a constant feature.
-The linear SVM uses balanced class weights, $\mathrm{dual}=\mathrm{False}$,
-squared hinge loss and at most 20,000 iterations. A convergence warning fails the run.
-
-In the margin formulation, labels are $y_i\in\{-1,+1\}$ and class weights are
-$\alpha_y=n/(2n_y)$. With the default unit intercept scaling, the solver minimizes
-\[
- \tfrac12(\|w'\|^2+(b')^2)+C\sum_i\alpha_{y_i}
-       \max\{0,1-y_i(w'\!\cdot z_i+b')\}^2.
-\]
-For inference without sklearn, coefficients are converted to original units:
-$w_j=w'_j/\sigma_j$ and $b=b'-\sum_jw_j\mu_j$. Documents are ranked by
-$S_B(q,d)=w\cdot x(q,d)+b$, not predicted class labels. A negative score can
-therefore appear in a selected top-$k$ list.
-
-\begin{table}[H]\centering\small
-\caption{Learned SVM coefficients. Feature numbers refer to Table 4.}
-\setlength{\tabcolsep}{15pt}
-\begin{tabular}{crr}\toprule
-Feature & Original-unit $w_j$ & Standardized $w'_j$ \\\midrule
-\WeightRows
-\bottomrule\end{tabular}\end{table}
-Selected $C=\SelectedC$; final cutoff $k=5$. Intercepts are $b=\RawIntercept$
-and $b'=\ScaledIntercept$. Coefficient interpretation is discussed in Section 12.
-
-\clearpage
-\section{Plan of Experiments and Evaluation Measures}
-\subsection{Query-Level Separation}
-A local Python random generator with seed 42 shuffles sorted query IDs and assigns
-60\% to training, 20\% to validation and 20\% to final testing. All query-document
-pairs for one query stay together. The resulting label counts are:
-\begin{table}[H]\centering\small
-\caption{Experimental partitions and binary query-document labels.}
-\begin{tabular}{lrrrr}\toprule
-Partition & Queries & Pairs & Positive & Negative \\\midrule
-\SplitRows
-\bottomrule\end{tabular}\end{table}
-The 991 positives among 189,000 training pairs explain the need for class
-balancing. Validation selects operating settings only. Models are not refitted
-after selection, so their saved coefficients reproduce the held-out predictions.
-Corpus-wide IDF and average length are unsupervised statistics over the searchable
-collection, not statistics learned from test labels.
-
-\subsection{Settings and Selection Procedure}
-Method A searches 286 vectors using training macro F1 at 10, then chooses a
-validation cutoff. Method B tries $C\in\{0.01,0.1,1\}$ and the same five cutoffs.
-Its best validation result at each C is shown below; the tie between 0.1 and 1
-selects 0.1. Cutoff ties select the smaller value.
-\begin{table}[H]\centering\small
-\caption{Validation selection for the pointwise linear SVM.}
-\begin{tabular}{rrr}\toprule
-$C$ & Best cutoff & Validation macro F1 \\\midrule
-\ValidationRows
-\bottomrule\end{tabular}\end{table}
-
-\subsection{Precision, Recall and F1}
-Let $R_q$ be the actually returned list and $G_q$ the known relevant document set.
-With $h_q=|R_q\cap G_q|$,
-\[
- P_q=\frac{h_q}{|R_q|},\qquad R_q^{\mathrm{metric}}=\frac{h_q}{|G_q|},\qquad
- F1_q=\frac{2P_qR_q^{\mathrm{metric}}}{P_q+R_q^{\mathrm{metric}}}.
-\]
-Empty denominators give zero. Precision uses the actual returned count. Macro
-scores average per-query values, including zero-hit queries; macro F1 averages
-query F1. Micro scores pool hit, retrieved and relevant counts. All measurements
-use the exact exported lists.
-
-\clearpage
-\section{Held-Out Results}
-\subsection{Primary Test Evaluation}
-The following results use each model's validation-selected cutoff on the same 45
-untouched test queries. The test set contains 341 positive judgments. Full
-per-query measurements are supplied in \texttt{results/evaluation.txt}.
-\begin{table}[H]\centering\scriptsize
-\caption{Primary test results. H/Ret/Rel denotes pooled hits/retrieved/relevant counts.}
-\setlength{\tabcolsep}{4pt}
-\begin{tabular}{llrrrrl}\toprule
-Method & Average & $k$ & Precision & Recall & F1 & H / Ret / Rel \\\midrule
-\SummaryRows
-\bottomrule\end{tabular}\end{table}
-
-\begin{figure}[H]\centering
-\begin{tikzpicture}
-\begin{axis}[width=0.95\linewidth,height=5.5cm,ybar,bar width=14pt,
-  ymin=0,ymax=0.40,ylabel={Held-out macro score},
-  symbolic x coords={Precision,Recall,F1},xtick=data,
-  ymajorgrids=true,grid style={gray!20},
-  legend style={at={(0.5,1.03)},anchor=south,legend columns=2,draw=none,font=\small},
-  tick label style={font=\small},label style={font=\small}]
-\addplot[fill=zoneblue!65,draw=zoneblue] coordinates {(Precision,0.0125925926) (Recall,0.0755821738) (F1,0.0196831439)};
-\addplot[fill=svmteal!65,draw=svmteal] coordinates {(Precision,0.3155555556) (Recall,0.2607662862) (F1,0.2701536607)};
-\legend{Method A ($k=30$),Method B ($k=5$)}
-\end{axis}
-\end{tikzpicture}
-\caption{Macro metrics at the operating points selected on validation queries.}
+\begin{figure}[htbp]\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[x=1pt,y=1pt]
+\path[use as bounding box] (0,0) rectangle (451,518);
+\definecolor{figure0color0}{rgb}{0,0,0}
+\definecolor{figure0color1}{rgb}{1,1,1}
+\path[line width=0.6000pt,draw=figure0color0,fill=figure0color1] (42.0000,482.0000) rectangle (409.0000,510.0000);
+\path[line width=0.6000pt,draw=figure0color0,fill=figure0color1] (42.0000,430.0000) rectangle (409.0000,466.0000);
+\path[line width=0.6000pt,draw=figure0color0,fill=figure0color1] (42.0000,382.0000) rectangle (409.0000,418.0000);
+\path[line width=0.6000pt,draw=figure0color0,fill=figure0color1] (42.0000,334.0000) rectangle (409.0000,370.0000);
+\path[line width=0.6500pt,draw=figure0color0] (225.5000,482.0000) -- (225.5000,466.0000);
+\path[line width=0.4000pt,draw=figure0color0,fill=figure0color0] (225.5000,466.0000) -- (223.0000,471.0000) -- (228.0000,471.0000) -- (225.5000,466.0000);
+\path[line width=0.6500pt,draw=figure0color0] (225.5000,430.0000) -- (225.5000,418.0000);
+\path[line width=0.4000pt,draw=figure0color0,fill=figure0color0] (225.5000,418.0000) -- (223.0000,423.0000) -- (228.0000,423.0000) -- (225.5000,418.0000);
+\path[line width=0.6500pt,draw=figure0color0] (225.5000,382.0000) -- (225.5000,370.0000);
+\path[line width=0.4000pt,draw=figure0color0,fill=figure0color0] (225.5000,370.0000) -- (223.0000,375.0000) -- (228.0000,375.0000) -- (225.5000,370.0000);
+\path[line width=0.6000pt,draw=figure0color0,fill=figure0color1] (8.0000,278.0000) rectangle (215.0000,320.0000);
+\path[line width=0.6000pt,draw=figure0color0,fill=figure0color1] (236.0000,278.0000) rectangle (443.0000,320.0000);
+\path[line width=0.6500pt,draw=figure0color0] (225.5000,334.0000) -- (225.5000,328.0000);
+\path[line width=0.6500pt,draw=figure0color0] (225.5000,328.0000) -- (111.5000,328.0000);
+\path[line width=0.6500pt,draw=figure0color0] (111.5000,328.0000) -- (111.5000,320.0000);
+\path[line width=0.4000pt,draw=figure0color0,fill=figure0color0] (111.5000,320.0000) -- (109.0000,325.0000) -- (114.0000,325.0000) -- (111.5000,320.0000);
+\path[line width=0.6500pt,draw=figure0color0] (225.5000,334.0000) -- (225.5000,328.0000);
+\path[line width=0.6500pt,draw=figure0color0] (225.5000,328.0000) -- (339.5000,328.0000);
+\path[line width=0.6500pt,draw=figure0color0] (339.5000,328.0000) -- (339.5000,320.0000);
+\path[line width=0.4000pt,draw=figure0color0,fill=figure0color0] (339.5000,320.0000) -- (337.0000,325.0000) -- (342.0000,325.0000) -- (339.5000,320.0000);
+\path[line width=0.6000pt,draw=figure0color0,fill=figure0color1] (8.0000,218.0000) rectangle (215.0000,266.0000);
+\path[line width=0.6000pt,draw=figure0color0,fill=figure0color1] (236.0000,218.0000) rectangle (443.0000,266.0000);
+\path[line width=0.6500pt,draw=figure0color0] (111.5000,278.0000) -- (111.5000,266.0000);
+\path[line width=0.4000pt,draw=figure0color0,fill=figure0color0] (111.5000,266.0000) -- (109.0000,271.0000) -- (114.0000,271.0000) -- (111.5000,266.0000);
+\path[line width=0.6500pt,draw=figure0color0] (339.5000,278.0000) -- (339.5000,266.0000);
+\path[line width=0.4000pt,draw=figure0color0,fill=figure0color0] (339.5000,266.0000) -- (337.0000,271.0000) -- (342.0000,271.0000) -- (339.5000,266.0000);
+\path[line width=0.6000pt,draw=figure0color0,fill=figure0color1] (42.0000,160.0000) rectangle (409.0000,204.0000);
+\path[line width=0.6500pt,draw=figure0color0] (111.5000,218.0000) -- (111.5000,211.0000);
+\path[line width=0.6500pt,draw=figure0color0] (111.5000,211.0000) -- (225.5000,211.0000);
+\path[line width=0.6500pt,draw=figure0color0] (225.5000,211.0000) -- (225.5000,204.0000);
+\path[line width=0.4000pt,draw=figure0color0,fill=figure0color0] (225.5000,204.0000) -- (223.0000,209.0000) -- (228.0000,209.0000) -- (225.5000,204.0000);
+\path[line width=0.6500pt,draw=figure0color0] (339.5000,218.0000) -- (339.5000,211.0000);
+\path[line width=0.6500pt,draw=figure0color0] (339.5000,211.0000) -- (225.5000,211.0000);
+\path[line width=0.6500pt,draw=figure0color0] (225.5000,211.0000) -- (225.5000,204.0000);
+\path[line width=0.4000pt,draw=figure0color0,fill=figure0color0] (225.5000,204.0000) -- (223.0000,209.0000) -- (228.0000,209.0000) -- (225.5000,204.0000);
+\path[line width=0.6000pt,draw=figure0color0,fill=figure0color1] (42.0000,110.0000) rectangle (409.0000,148.0000);
+\path[line width=0.6500pt,draw=figure0color0] (225.5000,160.0000) -- (225.5000,148.0000);
+\path[line width=0.4000pt,draw=figure0color0,fill=figure0color0] (225.5000,148.0000) -- (223.0000,153.0000) -- (228.0000,153.0000) -- (225.5000,148.0000);
+\path[line width=0.6000pt,draw=figure0color0,fill=figure0color1] (8.0000,54.0000) rectangle (215.0000,98.0000);
+\path[line width=0.6000pt,draw=figure0color0,fill=figure0color1] (236.0000,54.0000) rectangle (443.0000,98.0000);
+\path[line width=0.6500pt,draw=figure0color0] (225.5000,110.0000) -- (225.5000,104.0000);
+\path[line width=0.6500pt,draw=figure0color0] (225.5000,104.0000) -- (111.5000,104.0000);
+\path[line width=0.6500pt,draw=figure0color0] (111.5000,104.0000) -- (111.5000,98.0000);
+\path[line width=0.4000pt,draw=figure0color0,fill=figure0color0] (111.5000,98.0000) -- (109.0000,103.0000) -- (114.0000,103.0000) -- (111.5000,98.0000);
+\path[line width=0.6500pt,draw=figure0color0] (225.5000,110.0000) -- (225.5000,104.0000);
+\path[line width=0.6500pt,draw=figure0color0] (225.5000,104.0000) -- (339.5000,104.0000);
+\path[line width=0.6500pt,draw=figure0color0] (339.5000,104.0000) -- (339.5000,98.0000);
+\path[line width=0.4000pt,draw=figure0color0,fill=figure0color0] (339.5000,98.0000) -- (337.0000,103.0000) -- (342.0000,103.0000) -- (339.5000,98.0000);
+\path[line width=0.6000pt,draw=figure0color0,fill=figure0color1] (8.0000,4.0000) rectangle (215.0000,42.0000);
+\path[line width=0.6000pt,draw=figure0color0,fill=figure0color1] (236.0000,4.0000) rectangle (443.0000,42.0000);
+\path[line width=0.6500pt,draw=figure0color0] (111.5000,54.0000) -- (111.5000,42.0000);
+\path[line width=0.4000pt,draw=figure0color0,fill=figure0color0] (111.5000,42.0000) -- (109.0000,47.0000) -- (114.0000,47.0000) -- (111.5000,42.0000);
+\path[line width=0.6500pt,draw=figure0color0] (339.5000,54.0000) -- (339.5000,42.0000);
+\path[line width=0.4000pt,draw=figure0color0,fill=figure0color0] (339.5000,42.0000) -- (337.0000,47.0000) -- (342.0000,47.0000) -- (339.5000,42.0000);
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (132.9917,492.8000) {Documents, queries and relevance judgments};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (142.6028,450.8000) {Read the four fields and align query IDs};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (128.5464,438.8000) {Lowercase and tokenize documents and queries};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (113.6776,402.8000) {Build document frequencies, lengths and vector norms};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (143.0274,390.8000) {Corpus statistics use no relevance labels};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (186.7342,354.8000) {Split whole queries};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (135.8581,342.8000) {135 training; 45 validation; 45 held-out test};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont\bfseries}] at (58.3863,301.8000) {Method A: Boolean zones};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (55.1138,289.8000) {Four Boolean field matches};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont\bfseries}] at (291.7909,301.8000) {Method B: linear SVM};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (274.7557,289.8000) {All 22 query-document features};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (30.9895,250.8000) {Learn weights from training judgments};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (45.5049,238.8000) {Grid search over 286 candidates};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (40.8416,226.8000) {Maximize training macro F1 at 10};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (271.8044,250.8000) {Fit scaling on training pairs only};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (280.7385,238.8000) {Use training relevance labels};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (263.9925,226.8000) {Fit balanced linear SVMs for each C};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (151.8651,184.8000) {Select settings on validation queries};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (137.7789,172.8000) {Method A: cutoff; Method B: C and cutoff};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (116.3145,131.8000) {Keep the selected trained models and corpus settings};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (145.6390,119.8000) {No refitting in the primary experiment};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (43.4877,78.8000) {Apply to 45 held-out test queries};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (42.1658,66.8000) {Score and rank at selected cutoffs};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (283.2515,78.8000) {Apply to new input queries};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (256.9448,66.8000) {Same preprocessing and learned weights};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (35.3728,25.8000) {Ranked lists; precision, recall and F1};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (40.8876,13.8000) {Compare with held-out judgments};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (264.9311,25.8000) {Single-query or batch ranked results};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure0color0,font={\normalfont\rmfamily\fontsize{9.4000}{11.2800}\selectfont}] at (257.4657,13.8000) {Evaluate only if judgments are supplied};
+\end{tikzpicture}%
+}
+\caption{Training, model selection, held-out evaluation and model reuse.}
 \end{figure}
-Method B retrieves 71 judged relevant documents in 225 returned positions, while
-Method A retrieves 17 in 1,350 positions. Method B has higher precision and recall
-despite returning shorter lists. The differing cutoffs mean this is an
-operating-point comparison; Section 10 also compares identical cutoffs.
+\subsection{Learning the two ranking functions}
+Preparation stores a term set for each field and a stream containing term frequencies. It also calculates document lengths, document frequencies and vector norms. Document IDs remain in a fixed order throughout feature calculation and scoring.
 
-There are \ZoneZeroHits{} zero-hit queries for Method A and \SvmZeroHits{} for Method B.
-On per-query F1, Method B is better on \BetterQueries{} queries, tied on
-\TiedQueries{} and worse on \WorseQueries{}. These are descriptive results from one
-split, not a statistical significance claim. The difference between macro and
-micro recall also shows that the per-query relevant-set sizes are unequal.
+Method A evaluates candidate field weights by ranking the training queries and measuring macro F1. Method B pairs each training query with every document, calculates the 22 features and assigns a binary label from the judgments. Its scaler is fitted on those training pairs before the SVM coefficients are learned.
 
-\clearpage
-\section{Cutoff Analysis and a Query Example}
-This additional analysis fixes the already learned models and evaluates the test
-queries at common cutoffs. It does not retrain the models or use these test results
-to revise their selected operating points.
-\begin{table}[H]\centering\scriptsize
-\caption{Held-out macro metrics at identical cutoffs, using fixed learned weights.}
-\setlength{\tabcolsep}{5pt}
-\begin{tabular}{rrrrrrr}\toprule
-& \multicolumn{3}{c}{Method A} & \multicolumn{3}{c}{Method B} \\
-$k$ & P & R & F1 & P & R & F1 \\\midrule
-\CutoffRows
-\bottomrule\end{tabular}\end{table}
-\begin{figure}[H]\centering
-\begin{tikzpicture}
-\begin{axis}[width=0.95\linewidth,height=4.3cm,xlabel={Retrieval cutoff $k$},ylabel={Macro F1},
-  xmin=4,xmax=31,ymin=0,ymax=0.31,xtick={5,10,15,20,30},
-  ymajorgrids=true,grid style={gray!20},
-  legend style={at={(0.99,0.98)},anchor=north east,draw=none,font=\small},
-  tick label style={font=\small},label style={font=\small}]
-\addplot[color=zoneblue,mark=square*,thick] coordinates {\CurveA};
-\addplot[color=svmteal,mark=*,thick] coordinates {\CurveB};
-\legend{Method A,Method B}
-\end{axis}
-\end{tikzpicture}
-\caption{The SVM advantage persists when cutoff size is controlled.}
-\end{figure}
-At larger SVM cutoffs, recall rises but precision and F1 fall. Method A remains
-weak at every tested cutoff, consistent with its coarse Boolean inputs and many
-ties. No BM25 baseline or alternative preprocessing experiment was run here;
-their effects cannot be inferred from these measurements.
+Validation selects the cutoff for both methods and C for the SVM. The primary experiment keeps the models fitted on the training partition. It uses the test judgments after producing the final rankings. The nested baseline study has a separate fitting and selection procedure, described in Section 14.
 
-For query 223 (source ID 356), \emph{``papers on shear buckling of unstiffened
-rectangular plates under shear''}, the five SVM results are:
-\begin{table}[H]\centering\small
-\caption{Example SVM output, evaluated using supplied judgments only.}
-\begin{tabular}{rrrl}\toprule
-Rank & Document & Score & Judgment \\\midrule
-\ExampleRows
-\bottomrule\end{tabular}\end{table}
-Three hits among five results and four known relevant documents give
-$P=0.6$, $R=0.75$, $F1=2/3$. ``Unjudged'' means absent from the positive qrels;
-the evaluation treats it as nonrelevant without asserting its true semantic relevance.
+\subsection{Applying the learned scores}
+For a new query, Method A forms the four Boolean matches and adds their weighted contributions. Method B calculates the feature vector and applies the saved linear decision function. Prediction uses the saved preprocessing settings and checks the feature order before scoring.
 
-\clearpage
-\section{Testing, Validation and Complexity}
-The standard-library test suite contains \textbf{33 tests}, with zero failures,
-errors or skips in the final run. It checks computation and output correctness
-separately from retrieval effectiveness.
-\begin{table}[H]\centering\small
-\caption{Validation evidence recorded in the submitted test reports.}
-\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}p{3.5cm}Y}\toprule
-Check & Evidence \\\midrule
-Parsing and data integrity & Independent reader matches all 1,400 records; repeated fields retained; ordinal query alignment and grade counts verified. \\
-Feature calculations & 35,200 values checked independently: 25 documents, 32 queries, two stream choices and 22 features. \\
-Zone learning & Cached grid search equals exhaustive evaluation for grid divisions 2, 3 and 10, including all Boolean patterns and ties. \\
-SVM mathematics & Exported scores agree with the solver's own decision function; non-unit scaling and intercept conversion tested. \\
-Real outputs & All 45 test queries scored across 1,400 documents; saved rankings and all P/R/F1 values independently checked. \\
-Data isolation & Altering only final-test labels leaves learned parameters, selected cutoffs and ranking files unchanged. \\
-Inference and repeatability & CLI works with site-packages disabled; fresh full training reproduces all eight experiment files byte-for-byte. \\
+Both methods sort by decreasing score and break equal-score ties by increasing document ID. They then return the selected number of candidates. No new fitting is required. If judgments accompany the request, evaluation follows ranking and uses the list that was actually returned.
+
+\subsection{Keeping the experiment reproducible}
+We record the query partitions, parameters, selected settings, rankings and evaluation counts for each experiment. These records supply the tables and examples in the report and allow the calculations to be checked. Sections 16 and 17 give the reproduction and query commands.
+
+\section{Parsing, preprocessing and corpus statistics}
+The parser reads field markers, joins multiline text and preserves record IDs. Missing fields remain empty. Repeated sections of the same field are concatenated, which preserves content that would otherwise be lost when reading the supplied collection.
+
+Parsing rejects nonpositive or repeated record IDs, text outside a field and incomplete judgment rows. Judgment validation also checks the grade range and duplicate query-document pairs. These checks catch ID and formatting errors before model fitting.
+
+\subsection{Shared tokenization}
+We lowercase text and extract tokens with [a-z0-9]+. Punctuation separates tokens, and numbers are retained. The stream keeps repeated occurrences for the frequency features. Boolean field matching uses sets, since repeated terms do not change whether a field matches.
+
+This preprocessing leaves common words in the stream and keeps different word forms separate. Common words can trigger many field matches, while related forms can fail to match. We have not measured alternative preprocessing choices, so the reported results use this same tokenizer throughout.
+
+\subsection{Two views of a document}
+Method A uses the four fields separately. Method B normally concatenates them into one stream, retaining repeated content. A body-only option changes the SVM stream while preserving the four field sets used by Method A.
+
+For each stream, we count term occurrences and total tokens. Document frequency counts the documents containing a term, with at most one contribution per document. Average stream length includes empty documents. An all-empty synthetic collection uses a fallback denominator of one to keep the feature calculations defined.
+
+\subsection{Query-independent statistics and edge cases}
+IDF, average length and document norms are calculated from the searchable corpus without relevance labels. These statistics describe the collection available to the ranker. The supervised scaler and model weights, in contrast, are fitted using training pairs only.
+
+Both models return an empty list for an empty processed query. Method A also returns no results when every query term is unknown. The default SVM can still rank such a query through its length feature; an optional lexical-only policy requires a matching term. Section 13 describes this behavior in more detail.
+
+\section{Method A: Boolean field matches and ranking}
+Method A uses four binary values in the order title, author, bibliography and body. One weight is learned for each field, and the same four weights apply to every document in the collection.
+
+\subsection{Matching rule}
+Let Q contain the distinct processed query terms. In the reported experiment, a field matches when it contains at least one term from Q. A conjunctive option instead requires all terms in the same field. An empty query has no matching fields.
+
+For a match vector [1, 0, 1, 1], the title, bibliography and body contribute to the score. The author field contributes zero. The score is calculated as follows:
+
+\begin{small}\begin{verbatim}
+score_A(q, d) = w_title * match_title
+              + w_author * match_author
+              + w_bibliography * match_bibliography
+              + w_body * match_body
+\end{verbatim}\end{small}
+The weights are nonnegative and sum to one, so the score lies between zero and one. It increases when a document matches fields with larger learned weights.
+
+\begin{table}[htbp]\centering\small
+\caption{Learned Boolean field weights.}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Field} & \textbf{Learned weight} \\\midrule
+Title & 0.3 \\
+Author & 0.1 \\
+Bibliography & 0.2 \\
+Body & 0.4 \\
 \bottomrule\end{tabularx}\end{table}
-The largest recorded discrepancy between standardized-coordinate SVM scores and
-exported original-unit scores is $2.22\times10^{-15}$, consistent with floating-point
-rounding. The source dataset's hashes remain unchanged during testing. Test outputs
-are in \path{test_results.txt}, \path{output_verification.txt} and
-\path{retraining_test.txt} under \texttt{results/}.
+\subsection{Example calculation}
+For heated aircraft, document 1362 has matches [1, 0, 1, 1]. Its score is 0.3 + 0.2 + 0.4 = 0.9. Document 13 scores 0.7 from a different match pattern. Section 13 lists the first five results from each saved model for this query.
 
-For $D$ documents, $m$ distinct query terms and $p=22$ features, feature extraction
-is $O(Dm)$ after corpus statistics are available. A linear scoring pass is $O(Dp)$;
-sorting is $O(D\log D)$. Zone grid search has 286 candidates and training-query
-ranking work in the worst case; caching equivalent orderings reduces repeated work.
-SVM optimization cost depends on the solver and data, so no fixed iteration count
-or training-time speedup is claimed.
+The zone ranker excludes zero-score documents, orders the remaining candidates by score and returns up to k results. If fewer than k documents match, precision uses the number actually returned. Equal scores are resolved by document ID.
 
-The experiment caches $225\times1{,}400\times22=6{,}930{,}000$ feature values,
-plus standardized training rows and corpus statistics. This is a count of values,
-not a claim that Python object storage occupies only a dense float-array size.
+\subsection{Limits of Boolean field matching}
+A Boolean field bit records presence but loses frequency, word order and the number of distinct matching terms. Documents with the same four-bit pattern receive identical scores even when their topical relevance differs. Field weights can reorder the patterns, but cannot separate documents within a pattern.
 
-\clearpage
-\section{Discussion, Deliverables and Conclusion}
-\subsection{What the Results Establish}
-The linear SVM is substantially more effective than the learned Boolean zones on
-this held-out split, including at identical cutoffs. Query coverage, frequencies,
-length normalization, VSM and BM25 provide distinctions absent from four field bits.
-The learned Boolean weights emphasize body and title, but many documents share
-the same Boolean pattern. Ascending-ID ties make this limitation reproducible
-rather than concealing it with an extra retrieval signal.
+\section{Learning the zone weights}
+We search a simplex grid with step 0.1. Each candidate is a nonnegative four-part vector summing to one. Enumerating integer allocations that sum to ten gives 286 candidates, including single-field and mixed-field choices.
 
-Large original-unit normalized-TF coefficients reflect small feature scales;
-they do not establish that these features are intrinsically more important.
-The negative AND-feature coefficient is learned from rare joint matches and
-correlated inputs, not a general recommendation to penalize complete query coverage.
-The pointwise SVM optimizes classification margins, while model selection uses
-ranking-list F1; no pairwise ranking loss is claimed.
+Each candidate ranks the 135 training queries at cutoff 10. The objective is their mean F1, and an exact tie keeps the first enumerated candidate. The selected weights are 0.3 for title, 0.1 for author, 0.2 for bibliography and 0.4 for body. Their training macro F1 is 0.010520.
 
-The evaluation is limited to one deterministic split and the supplied judgments.
-Binary conversion discards graded distinctions and treats unjudged pairs as
-negative. No significance test, external query evaluation, cross-validation study
-or guarantee of future-query performance is reported. Possible later experiments
-include stopword handling, term-level zone coverage and pairwise SVM training,
-but these have not been measured in this submission.
+\subsection{Choosing the returned list length}
+With those weights fixed, we evaluate cutoffs 5, 10, 15, 20 and 30 on the 45 validation queries:
 
-\subsection{Files and Reproduction}
-The deliverables are the programs in \texttt{src/}, tests in \texttt{tests/}, this
-report, and the text files in \texttt{results/}. The two required ranking files are
-\path{results_method_a.txt} and \path{results_method_b.txt}. Each line is
-\texttt{query\_id Q0 document\_id rank score run\_tag}. The evaluated cutoff is
-recorded separately; result lines use exactly that cutoff.
-\begin{lstlisting}
+\begin{table}[htbp]\centering\small
+\caption{Method A validation results at the tested cutoffs.}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Cutoff} & \textbf{Validation macro F1} \\\midrule
+5 & 0.002339 \\
+10 & 0.004191 \\
+15 & 0.003384 \\
+20 & 0.002840 \\
+30 & 0.005432 \\
+\bottomrule\end{tabularx}\end{table}
+Cutoff 30 gives the highest validation macro F1 among the tested settings. The primary Method A test run therefore returns up to 30 positive-score documents per query.
+
+\subsection{Avoiding repeated ranking work}
+There are only 16 possible four-field match patterns. Some weight vectors give the same ordering and ties over these patterns. We cache their training objective when their positive-score candidates also agree. This avoids repeating an equivalent ranking calculation.
+
+Scores are rounded to 12 decimal places to preserve the intended grid ties. Direct exhaustive checks agree with the cached learner for several grids, including the default grid.
+
+\subsection{Observed limitation}
+On validation queries, the largest positive-score tie group averages 872.60 documents and reaches 1,221 documents for one query. Within such a group, the document-ID tie rule determines the order. Searching a finer weight grid would still leave equal-pattern documents tied.
+
+The learning objective uses F1 at 10, while validation selects a final cutoff of 30. The weights are therefore not optimized specifically for the returned list length. Joint selection of weights and cutoff is a possible follow-up experiment.
+
+\section{SVM features: query coverage and raw frequencies}
+Each query-document pair has 22 features in the assignment's order. The formulas below fix the statistical conventions used in this experiment. The feature order is retained with the learned parameters and reused at prediction time.
+
+Let Q be the distinct query terms after tokenization. Let c(t) be the number of times term t occurs in the query, f(t,d) its raw frequency in the selected document stream, L the stream length, N the number of documents and df(t) the number of streams containing t. The smoothed IDF used for TF-IDF features is:
+
+\begin{small}\begin{verbatim}
+idf(t) = 1 + ln((N + 1) / (df(t) + 1))
+\end{verbatim}\end{small}
+\begin{table}[htbp]\centering\small
+\caption{Query, coverage and raw-frequency features.}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Position} & \textbf{Feature} & \textbf{Definition} \\\midrule
+1 & Query term number & Total query tokens, including repetitions. \\
+2 & Query term ratio & Distinct query terms found in the stream divided by the number of distinct query terms. \\
+3 & Stream length & Total processed tokens in the chosen stream. \\
+4 & IDF & Sum of smoothed IDF over distinct query terms that occur in the stream. \\
+5 & TF sum & Sum of raw frequencies over Q. \\
+6 & TF minimum & Smallest raw frequency over Q, including zeros. \\
+7 & TF maximum & Largest raw frequency over Q. \\
+8 & TF mean & Arithmetic mean of raw frequencies over Q. \\
+9 & TF variance & Population variance of raw frequencies over Q. \\
+\bottomrule\end{tabularx}\end{table}
+Frequency summaries range over every distinct query term, with zero for an absent term. For example, omitting one query term makes the minimum TF zero even if another term occurs many times. Variance is population variance, divided by the number of distinct query terms.
+
+\subsection{Worked frequency example}
+For query alpha alpha beta, suppose a document stream is alpha alpha beta gamma. The query has three tokens but two distinct terms. Its raw frequency vector over Q is [2, 1]. Features 1, 2 and 3 are 3, 1 and 4. The TF sum, minimum, maximum, mean and population variance are 3, 1, 2, 1.5 and 0.25. IDF values depend on the rest of the collection and cannot be assigned from this document alone.
+
+Repeated query terms contribute to the query token count and cosine query vector. The TF summaries use distinct terms, so the example has one alpha frequency entry rather than two. The independent calculator checks this convention along with the other feature formulas.
+
+Query length is constant across documents for a given request. Its coefficient alone cannot change that request's document order, although it affects classification margins across queries of different lengths. We retain it as part of the required feature vector.
+
+\section{SVM features: normalization and retrieval scores}
+The remaining features cover normalized TF, TF-IDF and three retrieval scores. For each frequency group, the summary order is sum, minimum, maximum, mean and population variance.
+
+\begin{table}[htbp]\centering\small
+\caption{Normalized frequencies and retrieval-score features.}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Positions} & \textbf{Feature group} & \textbf{Definition} \\\midrule
+10-14 & Normalized TF & Five summaries of f(t,d) / L over Q. \\
+15-19 & TF-IDF & Five summaries of f(t,d) * idf(t) over Q. \\
+20 & Boolean model & One if every distinct query term occurs in the stream; otherwise zero. \\
+21 & Vector space model & Cosine similarity between raw-TF times smoothed-IDF query and document vectors. \\
+22 & BM25 & Sum of BM25 term contributions with k1 = 1.2 and b = 0.75. \\
+\bottomrule\end{tabularx}\end{table}
+Normalized frequencies are zero for a zero-length stream. For the frequency example in Section 7, the normalized vector is [0.5, 0.25]. Its sum is 0.75, mean is 0.375 and variance is 0.015625. Dividing the raw variance by L would be incorrect; the variance of the normalized values divides the raw variance by L squared.
+
+\subsection{Cosine similarity}
+Document weights use raw term frequency multiplied by the smoothed IDF from Section 7. Query weights use c(t) multiplied by the same IDF. The dot product involves query terms, but the document norm includes its full vocabulary. Restricting that norm to matched query terms would overstate similarity and change the feature.
+
+\begin{small}\begin{verbatim}
+document_weight(t) = f(t,d) * idf(t)
+query_weight(t) = c(t) * idf(t)
+cosine = dot(document_weights, query_weights)
+         / (document_norm * query_norm)
+\end{verbatim}\end{small}
+Cosine is zero when either norm is zero. An unknown query term has document frequency zero and contributes no document weight. It still contributes to the query norm, reducing cosine similarity when the rest of the query has a partial match.
+
+\subsection{BM25}
+BM25 uses its own IDF expression rather than reusing the smoothed TF-IDF expression. The sum includes each distinct query term once. Let average\_L be the mean stream length across the corpus.
+
+\begin{small}\begin{verbatim}
+bm25_idf(t) = ln(1 + (N - df(t) + 0.5) / (df(t) + 0.5))
+length_norm = 1.2 * (0.25 + 0.75 * L / average_L)
+bm25 = sum(bm25_idf(t) * f(t,d) * 2.2
+           / (f(t,d) + length_norm) for t in Q)
+\end{verbatim}\end{small}
+An empty query has zero-valued features apart from stream length, and the ranking interface returns no results for it. Empty streams and absent terms produce finite feature values. The tests cover these cases for both stream options.
+
+\section{Linear SVM training and exported weights}
+The SVM training set contains 189,000 pairs: 135 queries paired with 1,400 documents. Only 991 pairs are positive. Each feature is standardized using the training-pair mean and population standard deviation; constant columns use scale one.
+
+We fit a linear SVM with balanced class weights, squared hinge loss and L2 regularization. The solver uses primal optimization, seed 42 and a limit of 20,000 iterations. Fitting stops if it fails to converge. Class balancing gives the rare positive examples more influence in the training objective.
+
+\begin{table}[htbp]\centering\small
+\caption{Original-unit and standardized SVM coefficients.}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Feature} & \textbf{Original-unit weight} & \textbf{Standardized weight} \\\midrule
+f1 & -0.0194058 & -0.135497 \\
+f2 & +0.463602 & +0.057099 \\
+f3 & -0.000115603 & -0.010393 \\
+f4 & -0.0564386 & -0.276684 \\
+f5 & -0.0114176 & -0.234726 \\
+f6 & +0.198982 & +0.001650 \\
+f7 & -0.0249545 & -0.231572 \\
+f8 & -0.057942 & -0.071641 \\
+f9 & +0.00804073 & +0.237202 \\
+f10 & +2.10505 & +0.166341 \\
+f11 & +45.9213 & +0.005458 \\
+f12 & +1.37187 & +0.045029 \\
+f13 & -52.5741 & -0.246634 \\
+f14 & +17.1219 & +0.005475 \\
+f15 & +0.00714147 & +0.175562 \\
+f16 & +1.39056 & +0.017122 \\
+f17 & -0.00102308 & -0.009392 \\
+f18 & +0.134272 & +0.196365 \\
+f19 & -0.00306328 & -0.095344 \\
+f20 & -7.75515 & -0.035677 \\
+f21 & +3.60034 & +0.152649 \\
+f22 & +0.135135 & +0.453768 \\
+\bottomrule\end{tabularx}\end{table}
+The selected primary model uses C = 0.1 and cutoff 5. Its standardized intercept is -0.494632; its original-unit intercept is -0.291903. Original-unit coefficients are obtained by dividing each standardized coefficient by its training scale and adjusting the intercept by the means. Thus score\_B = sum(weight[j] * feature[j]) + intercept reproduces the solver's decision value without loading scikit-learn during prediction.
+
+Ranking uses the continuous decision value. The large original-unit coefficients for normalized TF partly reflect the small units of those features. Since the inputs are correlated, individual coefficient signs and magnitudes should be interpreted in the context of the fitted vector. The SVM optimizes a pointwise classification loss.
+
+\section{Experiment plan and evaluation}
+We use a query-level 60/20/20 split with seed 42. All document pairs for one query stay in the same partition. This keeps the training and evaluation queries disjoint while allowing both models to search the complete collection.
+
+\begin{table}[htbp]\centering\small
+\caption{Primary query partitions and binary pair counts.}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Partition} & \textbf{Queries} & \textbf{Pairs} & \textbf{Relevant} & \textbf{Other} \\\midrule
+Train & 135 & 189,000 & 991 & 188,009 \\
+Validation & 45 & 63,000 & 280 & 62,720 \\
+Test & 45 & 63,000 & 341 & 62,659 \\
+\bottomrule\end{tabularx}\end{table}
+The selection objective is validation macro F1. Method A chooses among five cutoffs after learning its weights. Method B tries C values 0.01, 0.1 and 1 with the same cutoff set. Ties retain the smaller C or cutoff. The best validation setting for each C is shown below.
+
+\begin{table}[htbp]\centering\small
+\caption{Best primary validation setting for each SVM C.}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+\textbf{C} & \textbf{Best cutoff} & \textbf{Validation macro F1} \\\midrule
+0.01 & 5 & 0.241029 \\
+0.1 & 5 & 0.247378 \\
+1 & 5 & 0.247378 \\
+\bottomrule\end{tabularx}\end{table}
+After selection, we keep the models fitted on the 135 training queries. The 45 test queries provide the primary comparison. Corpus statistics use no judgments; scaling and fitted weights use training pairs; C and cutoff use validation performance. The common-cutoff results in Section 11 describe the fixed models and do not change their selected settings.
+
+\subsection{Precision, recall and F1}
+For each query, hits counts returned documents in its known relevant set, returned is the actual list length and relevant is the size of that set. We calculate:
+
+\begin{small}\begin{verbatim}
+precision = hits / returned
+recall = hits / relevant
+F1 = 2 * precision * recall / (precision + recall)
+\end{verbatim}\end{small}
+A zero denominator gives zero. Precision uses the actual list length, including when the zone model returns fewer than k candidates. Duplicate document IDs are rejected.
+
+Macro averages give each query equal weight and include zero-hit queries. Macro F1 is the average of the query F1 values. Micro measures pool the hit, returned and relevant counts before applying the formulas. We report both because relevant-set sizes differ between queries. Evaluation uses the same lists written to the ranking output.
+
+\section{Test results and discussion}
+The primary test partition has 45 queries and 341 positive judgments. We use the validation-selected cutoffs: 30 for Boolean zones and 5 for the SVM.
+
+\begin{table}[htbp]\centering\small
+\caption{Primary held-out precision, recall and F1.}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Method} & \textbf{Average} & \textbf{k} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} \\\midrule
+A & macro & 30 & 0.012593 & 0.075582 & 0.019683 \\
+A & micro & 30 & 0.012593 & 0.049853 & 0.020106 \\
+B & macro & 5 & 0.315556 & 0.260766 & 0.270154 \\
+B & micro & 5 & 0.315556 & 0.208211 & 0.250883 \\
+\bottomrule\end{tabularx}\end{table}
+\begin{figure}[htbp]\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[x=1pt,y=1pt]
+\path[use as bounding box] (0,0) rectangle (470,182);
+\definecolor{figure1color0}{rgb}{0.847059,0.878431,0.901961}
+\path[line width=0.4000pt,draw=figure1color0] (43.0000,37.0000) -- (453.0000,37.0000);
+\path[line width=0.4000pt,draw=figure1color0] (43.0000,65.2500) -- (453.0000,65.2500);
+\path[line width=0.4000pt,draw=figure1color0] (43.0000,93.5000) -- (453.0000,93.5000);
+\path[line width=0.4000pt,draw=figure1color0] (43.0000,121.7500) -- (453.0000,121.7500);
+\path[line width=0.4000pt,draw=figure1color0] (43.0000,150.0000) -- (453.0000,150.0000);
+\definecolor{figure1color1}{rgb}{0.333333,0.333333,0.333333}
+\path[line width=1.0000pt,draw=figure1color1,fill=figure1color1] (84.3333,37.0000) rectangle (107.3333,40.5574);
+\path[line width=1.0000pt,draw=figure1color1,fill=figure1color1] (221.0000,37.0000) rectangle (244.0000,58.3520);
+\path[line width=1.0000pt,draw=figure1color1,fill=figure1color1] (357.6667,37.0000) rectangle (380.6667,42.5605);
+\path[line width=1.0000pt,draw=figure1color1,fill=figure1color1] (43.0000,4.0000) rectangle (51.0000,12.0000);
+\definecolor{figure1color2}{rgb}{0.733333,0.733333,0.733333}
+\path[line width=1.0000pt,draw=figure1color2,fill=figure1color2] (111.3333,37.0000) rectangle (134.3333,126.1444);
+\path[line width=1.0000pt,draw=figure1color2,fill=figure1color2] (248.0000,37.0000) rectangle (271.0000,110.6665);
+\path[line width=1.0000pt,draw=figure1color2,fill=figure1color2] (384.6667,37.0000) rectangle (407.6667,113.3184);
+\path[line width=1.0000pt,draw=figure1color2,fill=figure1color2] (233.0000,4.0000) rectangle (241.0000,12.0000);
+\definecolor{figure1color3}{rgb}{0,0,0}
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure1color3,font={\normalfont\rmfamily\fontsize{10.0000}{12.0000}\selectfont\bfseries}] at (43.0000,169.0000) {Held-out macro metrics at selected cutoffs};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure1color3,font={\normalfont\rmfamily\fontsize{8.0000}{9.6000}\selectfont}] at (21.7852,34.0000) {0.00};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure1color3,font={\normalfont\rmfamily\fontsize{8.0000}{9.6000}\selectfont}] at (21.7852,62.2500) {0.10};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure1color3,font={\normalfont\rmfamily\fontsize{8.0000}{9.6000}\selectfont}] at (21.7852,90.5000) {0.20};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure1color3,font={\normalfont\rmfamily\fontsize{8.0000}{9.6000}\selectfont}] at (21.7852,118.7500) {0.30};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure1color3,font={\normalfont\rmfamily\fontsize{8.0000}{9.6000}\selectfont}] at (21.7852,147.0000) {0.40};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure1color3,font={\normalfont\rmfamily\fontsize{9.0000}{10.8000}\selectfont}] at (93.5047,22.0000) {Precision};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure1color3,font={\normalfont\rmfamily\fontsize{9.0000}{10.8000}\selectfont}] at (235.9524,22.0000) {Recall};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure1color3,font={\normalfont\rmfamily\fontsize{9.0000}{10.8000}\selectfont}] at (379.4833,22.0000) {F1};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure1color3,font={\normalfont\rmfamily\fontsize{8.0000}{9.6000}\selectfont}] at (57.0000,4.0000) {A: Boolean zones, k=30};
+\node[anchor=base west,inner sep=0pt,outer sep=0pt,text=figure1color3,font={\normalfont\rmfamily\fontsize{8.0000}{9.6000}\selectfont}] at (247.0000,4.0000) {B: linear SVM, k=5};
+\end{tikzpicture}%
+}
+\caption{Held-out macro metrics at the selected cutoffs.}
+\end{figure}
+The zone model retrieves 17 judged relevant documents in 1,350 returned positions. The SVM retrieves 71 in 225 positions. Its precision and recall are both higher, although its lists are shorter. It has zero hits on 16 queries, compared with 30 for the zone model. Its per-query F1 is higher on 29 queries, equal on 13 and lower on 3.
+
+\subsection{Comparing identical cutoffs}
+The next table fixes the learned weights and truncates both models at the same cutoff. It controls list length when comparing their descriptive test behavior.
+
+\begin{table}[htbp]\centering\small
+\caption{Held-out macro metrics at identical cutoffs.}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+\textbf{k} & \textbf{A P} & \textbf{A R} & \textbf{A F1} & \textbf{B P} & \textbf{B R} & \textbf{B F1} \\\midrule
+5 & 0.0089 & 0.0067 & 0.0074 & 0.3156 & 0.2608 & 0.2702 \\
+10 & 0.0111 & 0.0130 & 0.0112 & 0.2311 & 0.3686 & 0.2662 \\
+15 & 0.0119 & 0.0215 & 0.0146 & 0.1881 & 0.4389 & 0.2455 \\
+20 & 0.0100 & 0.0228 & 0.0133 & 0.1500 & 0.4570 & 0.2118 \\
+30 & 0.0126 & 0.0756 & 0.0197 & 0.1126 & 0.5063 & 0.1749 \\
+\bottomrule\end{tabularx}\end{table}
+At the common cutoff of 5, macro F1 is 0.2702 for the SVM and 0.0074 for Boolean zones. The difference therefore persists when list length is held equal. For the SVM, increasing k from 5 to 30 raises recall from 0.2608 to 0.5063, but lowers precision from 0.3156 to 0.1126 and F1 from 0.2702 to 0.1749. The primary operating point remains the one chosen on validation queries.
+
+\subsection{Why the two models differ}
+The main weakness of Boolean scoring is the number of documents that share a match pattern. A common word can make a field match just as readily as a topic-specific word. Once the four bits are fixed, neither additional matching terms nor higher frequency changes the score. The large validation tie groups explain why the document-ID rule has substantial influence on the result lists.
+
+The SVM has more information with which to separate these documents. Coverage, normalized frequency, cosine and BM25 can vary even when the Boolean field bits are identical. The stronger results are consistent with this extra discrimination. We have not run feature ablations, so these experiments do not isolate the contribution of any one feature.
+
+\subsection{Limits of the result and follow-up experiments}
+The SVM's macro F1 exceeds the zone model's by about 0.2505 on this split, but 16 zero-hit queries remain. The strong result for query 223 in Section 12 is only one example. Further query-level analysis is needed to determine how often limited lexical overlap or missing judgments account for the failures.
+
+Training also differs from the evaluation objective. The SVM minimizes a classification loss, while settings are selected by list-level F1. Method A learns weights at cutoff 10 and returns up to 30 results after validation. These mismatches may limit the quality of the selected rankings. They are reasonable targets for further experiments, rather than evidence that the present settings are optimal.
+
+A follow-up study could learn zone weights jointly with cutoff, compare stopword and stemming choices, and vary SVM regularization or class weighting. These choices should be selected using development queries. The current report contains no measured gain from those alternatives. Once a test set has informed repeated development, a fresh unseen query set is needed for an independent final check.
+
+\section{A judged test-query example}
+Query 223 is a held-out query. Its source ID is 356, while 223 is the identifier used by the supplied judgments. Its text is:
+
+papers on shear buckling of unstiffened rectangular plates under shear .
+
+The SVM returns three judged relevant documents and two unjudged documents for this query. The complete result list makes the metric calculation easy to check.
+
+\subsection{Method B: all five returned documents}
+\begin{table}[htbp]\centering\small
+\caption{All five SVM results for test query 223.}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Rank} & \textbf{Document} & \textbf{Score} & \textbf{Qrel grade} \\\midrule
+1 & 400 & 2.996310 & 3 \\
+2 & 1399 & 2.613746 & Unjudged \\
+3 & 1387 & 1.879368 & 3 \\
+4 & 1400 & 1.874723 & Unjudged \\
+5 & 1398 & 1.801843 & 3 \\
+\bottomrule\end{tabularx}\end{table}
+Documents 400, 1387 and 1398 are positive judgments. Documents 1399 and 1400 are unjudged and count as negative for evaluation. With three hits, five returned documents and four known relevant documents, precision is 3/5, recall is 3/4 and F1 is 2/3.
+
+\subsection{Method A: first five of its 30 returned documents}
+\begin{table}[htbp]\centering\small
+\caption{First five Boolean-zone results for test query 223.}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Rank} & \textbf{Document} & \textbf{Score} & \textbf{Qrel grade} \\\midrule
+1 & 240 & 1.000000 & Unjudged \\
+2 & 2 & 0.900000 & Unjudged \\
+3 & 3 & 0.900000 & Unjudged \\
+4 & 17 & 0.900000 & Unjudged \\
+5 & 19 & 0.900000 & Unjudged \\
+\bottomrule\end{tabularx}\end{table}
+Method A returns 30 documents for this query; the table displays only its first five. None of the 30 is a positive judgment. Its first document matches every field and scores one, while the equal scores below it are ordered by document ID. The Boolean matches are therefore insufficient to produce a useful ranking for this request.
+
+\subsection{Reading the example}
+The two score scales differ, so a value such as 2.996310 cannot be compared numerically with a zone score of 1.0. The comparison is between the returned document orders and their judged relevance.
+
+The aggregate evaluation includes all queries, including the 16 zero-hit SVM cases. This example illustrates the scoring behavior but does not stand in for that aggregate result.
+
+\section{A new-query result and the output format}
+For a new-query example, we use heated aircraft with query ID 901 and request five results from each saved model. No judgments accompany this request, so the example shows rankings and scores without assigning precision, recall or F1.
+
+These are the actual saved-model outputs. Section 17 gives the corresponding single-query and batch commands.
+
+\subsection{SVM output}
+\begin{small}\begin{verbatim}
+901 Q0 1268 1 2.1770113049064359 PA3_B
+901 Q0 51 2 2.057738789212511 PA3_B
+901 Q0 13 3 1.9510417954324248 PA3_B
+901 Q0 100 4 1.4537703676285045 PA3_B
+901 Q0 154 5 1.435145239384978 PA3_B
+\end{verbatim}\end{small}
+\subsection{Boolean-zone output}
+\begin{small}\begin{verbatim}
+901 Q0 1362 1 0.90000000000000002 PA3_A
+901 Q0 13 2 0.69999999999999996 PA3_A
+901 Q0 47 3 0.69999999999999996 PA3_A
+901 Q0 51 4 0.69999999999999996 PA3_A
+901 Q0 66 5 0.69999999999999996 PA3_A
+\end{verbatim}\end{small}
+The six columns are query ID, Q0, document ID, rank, score and run tag. Rank starts at one for each query. Scores descend, with document ID breaking ties. Scores retain enough digits for numerical reproduction. The query ID identifies the request and does not enter the scoring function.
+
+The SVM ranks document 1268 first, while the zone model ranks document 1362 first. Both use the same query and collection. Here k is explicitly set to 5; the saved zone-model default remains 30.
+
+\subsection{Empty or entirely unknown requests}
+Empty processed queries return no results. For a nonempty query made entirely of unknown terms, the zone model has no candidates. The default SVM can return length-dependent scores, including negative values. The lexical-only candidate policy instead requires a query-term match. This policy is retained with the model and used consistently in evaluation and prediction.
+
+The run tags are PA3\_A and PA3\_B. An empty result has no ranking lines, but its query still contributes to an evaluation generated from the input queries. This keeps empty requests in the macro averages.
+
+\section{Baseline comparison on development queries}
+We also compare the SVM with BM25 and TF-IDF cosine to assess how much it adds to standard retrieval scores. This study uses the 180 original training and validation queries. The 45 primary test queries are excluded.
+
+Three outer folds hold out 60 whole queries each. Within the other 120 queries, an inner split uses 96 for fitting and 24 for selection. SVM C is selected from 0.01, 0.1 and 1. Every integer cutoff from 1 to 30 is considered. Each baseline selects its own cutoff on the same inner validation queries. The chosen SVM is then refitted on all 120 outer training queries with a new scaler before predicting the outer holdout. Seed 42 fixes the splits.
+
+\begin{table}[htbp]\centering\small
+\caption{Development out-of-fold macro results.}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Method} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} \\\midrule
+SVM & 0.285880 & 0.333460 & 0.272459 \\
+BM25 & 0.288836 & 0.309396 & 0.264053 \\
+cosine & 0.271254 & 0.313238 & 0.249020 \\
+\bottomrule\end{tabularx}\end{table}
+Each development query has one outer-fold prediction. The reported macro averages summarize all 180 of these predictions. Their population and fitting procedure differ from the primary test experiment, so they are reported as a separate comparison.
+
+\begin{table}[htbp]\centering\small
+\caption{Settings selected within each development outer fold.}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Fold} & \textbf{SVM C} & \textbf{SVM k} & \textbf{BM25 k} & \textbf{Cosine k} \\\midrule
+1 & 0.01 & 8 & 6 & 6 \\
+2 & 0.01 & 6 & 5 & 4 \\
+3 & 0.01 & 6 & 7 & 11 \\
+\bottomrule\end{tabularx}\end{table}
+\subsection{Paired differences and uncertainty}
+For each query, we subtract the baseline F1 from SVM F1. We use 10,000 paired bootstrap samples for a 95\% percentile interval and a two-sided paired sign-flip test. Holm adjustment accounts for the two baseline comparisons.
+
+\begin{table}[htbp]\centering\small
+\caption{Paired F1 differences and adjusted significance tests.}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Comparison} & \textbf{F1 difference} & \textbf{95\% interval} & \textbf{Holm p} \\\midrule
+SVM minus BM25 & +0.008406 & [-0.009651, +0.025943] & 0.3566 \\
+SVM minus cosine & +0.023439 & [+0.004694, +0.041723] & 0.0328 \\
+\bottomrule\end{tabularx}\end{table}
+SVM has the highest mean F1, but its advantage over BM25 is small: 0.008406. The interval includes zero and the adjusted p-value is 0.3566. The data therefore support similar performance for these two methods under this protocol, rather than an established SVM improvement. Against cosine, the F1 difference is 0.023439 and the adjusted p-value is 0.0328.
+
+These intervals describe the paired query differences for the fitted folds. Outer training sets overlap, so they do not capture all training-set variation. One fold assignment and binary judgments are further limits. Taken together, the experiments show a large improvement over the Boolean model on the primary split, but a much less certain advantage over BM25 in the development study.
+
+\section{Regression checks and computational cost}
+We used 41 regression tests to check parsing, feature formulas, learning, saved-model prediction and evaluation. The recorded full run completed with no failures, errors or skips. A separate query audit within the same suite checks ranking consistency and input handling.
+
+\begin{table}[htbp]\centering\small
+\caption{Coverage of the consolidated regression checks.}
+\begin{tabularx}{\linewidth}{>{\raggedright\arraybackslash}X>{\raggedright\arraybackslash}X}
+\toprule
+\textbf{Area} & \textbf{Evidence from the checks} \\\midrule
+Parsing & An independent reader agrees on all 1,400 documents, including repeated field sections. \\
+Features & 35,200 values are checked independently across 25 documents, 32 queries, two streams and 22 features. \\
+Zone learning & Cached grid objectives match direct exhaustive evaluation, including pattern ties and positive-score filtering. \\
+SVM scores & Exported original-unit scores agree with the fitted solver's decision function. \\
+Saved results & Every test query is scored against all 1,400 documents; rankings and metrics agree with the saved files. \\
+Label isolation & Changing final-test labels leaves the learned models, cutoffs and exported rankings unchanged. \\
+Query inputs & Positive IDs, BOM files, malformed records, aliases and prediction from another directory are checked. \\
+Validation study & Fold separation, inner selection and paired uncertainty calculations are checked on controlled examples. \\
+\bottomrule\end{tabularx}\end{table}
+The audit checks 360 case, whitespace, punctuation, top-k prefix and unique-ID properties across both models and all 45 validation queries. It also tests invalid query IDs and BOM-encoded query records.
+
+\subsection{Full reproduction}
+A full reproduction run trains both models in a temporary directory. All eight experiment files match the supplied outputs byte for byte, and dataset hashes remain unchanged. The largest discrepancy between standardized-coordinate and exported SVM scores is about 2.22e-15.
+
+\subsection{Time and memory}
+With D documents and m distinct query terms, feature extraction takes O(D*m) after corpus statistics are available. Linear scoring takes O(D*22), and sorting takes O(D*log D). Zone fitting searches 286 candidates and reuses equivalent rankings. SVM fitting time depends on the solver and data.
+
+The primary run caches 6,930,000 feature values, along with scaled training rows and corpus statistics. Python objects require more memory than a packed numeric array. Training and cross-validation should therefore run sequentially on a memory-limited machine. Batching feature extraction would be a practical improvement for larger collections.
+
+\section{Running the programs}
+Run the following PowerShell commands from the project root. A backtick continues a command onto the next line. The project requires Python 3.10 or later. The recorded experiments used Python 3.12.2 and scikit-learn 1.7.2; solver-version changes may affect exact numerical reproduction.
+
+\subsection{Install the training dependency}
+\begin{small}\begin{verbatim}
 python -m pip install -r requirements.txt
-python src/train.py
-python -B tests/run_tests.py --retrain
-python src/predict.py --method svm --query "heat" --output search.txt
-\end{lstlisting}
-\texttt{weights.txt} stores field weights, all 22 SVM coefficients, intercept,
-scaling parameters and configuration as Python literal data. Prediction loads it
-with \texttt{ast.literal\_eval}; there is no JSON or binary model dependency.
-External queries may be Cranfield records, ID-tab-text rows or plain lines.
-Source IDs are preserved by default; \texttt{--query-id-mode ordinal} aligns the
-original Cranfield query file to its judgments.
+\end{verbatim}\end{small}
+Scikit-learn is the training dependency, with the supported range recorded in requirements.txt. Pip installs its transitive dependencies. The Cranfield collection is already included, so no corpus download is needed.
 
-\subsection{Conclusion}
-Both required methods, all 22 features, ranked outputs and precision/recall/F1 are
-implemented and independently checked. The SVM's macro F1 is 0.270154 versus
-0.019683 for Boolean zones. These measure retrieval quality, not correctness-test
-pass rates; unspecified implementation choices are documented explicitly.
+\subsection{Reproduce the main experiment}
+\begin{small}\begin{verbatim}
+python src/train.py
+\end{verbatim}\end{small}
+The default run reads the supplied collection and writes learned weights, settings, partitions, test queries, rankings and evaluation to results/. Use a separate output directory for an alternative experiment:
+
+\begin{small}\begin{verbatim}
+python src/train.py --output results/body_experiment --stream body
+\end{verbatim}\end{small}
+Training options include --seed, --grid-divisions, --zone-k, --zone-match, --stream, --svm-candidates, --cutoffs and --c-values. Their defaults reproduce the primary experiment. Select alternative settings using development queries and record them with the resulting model.
+
+\subsection{Run the consolidated tests}
+\begin{small}\begin{verbatim}
+python -B tests/run_tests.py
+python -B tests/run_tests.py --retrain
+\end{verbatim}\end{small}
+The first command runs the regression suite and query audit. Adding --retrain also fits both models and compares the eight experiment outputs. The script recreates results/test\_results.txt, results/output\_verification.txt and results/regression\_audit.txt. A full reproduction also writes results/retraining\_test.txt.
+
+\subsection{Run the additional validation study}
+\begin{small}\begin{verbatim}
+python -B src/validate.py
+\end{verbatim}\end{small}
+This writes the development comparison to results/cross\_validation.txt without changing the primary model or test rankings. Run it separately from full training if memory is limited. Each script accepts --help for its supported arguments.
+
+\section{Running queries and reading the results}
+Prediction loads the saved weights and document collection. Method names A and zone select Boolean scoring; B and svm select the SVM. Omitting --top-k uses the model's saved cutoff.
+
+\begin{small}\begin{verbatim}
+python src/predict.py --method svm --query "heated aircraft" `
+  --top-k 5 --output results/search_svm.txt
+python src/predict.py --method zone --query "heated aircraft" `
+  --top-k 5 --output results/search_zone.txt
+\end{verbatim}\end{small}
+\subsection{Batch files}
+Batch prediction accepts Cranfield records, ID-tab-text rows or one plain query per line. Save the following Cranfield example as queries.txt:
+
+\begin{small}\begin{verbatim}
+.I 901
+.W
+heated aircraft
+.I 905
+.W
+shear buckling rectangular plates
+\end{verbatim}\end{small}
+\begin{small}\begin{verbatim}
+python src/predict.py --method svm --queries queries.txt `
+  --output results/batch_svm.txt
+\end{verbatim}\end{small}
+The explicit IDs 901 and 905 are preserved. Tab-separated input must contain actual tab characters. Plain lines use physical line numbers as IDs, with blank lines skipped. UTF-8 files with a BOM are accepted. Duplicate or nonpositive explicit IDs are rejected.
+
+\subsection{Evaluate saved test queries}
+\begin{small}\begin{verbatim}
+python src/predict.py --method svm --queries results/test_queries.txt `
+  --qrels data/cran/cranqrel --output results/replayed_test.txt
+\end{verbatim}\end{small}
+The command also writes results/replayed\_test.evaluation.txt. Saved test queries already have judgment-aligned IDs. For the original data/cran/cran.qry, add --query-id-mode ordinal when using the original judgments. New query IDs require matching judgments of their own.
+
+\subsection{Use from Python or load an alternate experiment}
+\begin{small}\begin{verbatim}
+import sys
+sys.path.insert(0, "src")
+from predict import load_models, rank_query
+models = load_models()
+print(rank_query(models, "heated aircraft", method="B", top_k=5))
+\end{verbatim}\end{small}
+Use --weights results/body\_experiment/weights.txt to load an alternate model. The --documents option selects a collection, and --query-id labels a single-query request. Default collection and weight paths are resolved from the source tree, allowing prediction from another working directory.
 
 \end{document}

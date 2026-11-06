@@ -1,4 +1,4 @@
-"""Apply saved PA3 weights to unknown queries; prediction never retrains."""
+"""applying saved weights to unknown queries; prediction never retrains"""
 import argparse
 import ast
 import re
@@ -11,7 +11,6 @@ from features import FEATURE_NAMES
 from zone_model import ZoneRanker
 from svm_model import SVMRanker
 
-
 def load_models(weights_path=ROOT / "results" / "weights.txt", documents_path=DEFAULT_DATA / "cran.all.1400"):
     """Rebuild both models from their learned plain-text parameters."""
 
@@ -22,24 +21,21 @@ def load_models(weights_path=ROOT / "results" / "weights.txt", documents_path=DE
     return {"collection": collection, "A": ZoneRanker(**parameters["A"]),
             "B": SVMRanker(**parameters["B"])}
 
-
 def rank_query(models, query, method="B", top_k=None):
     """Return (document ID, score) pairs for one query with either model."""
     if method not in {"A", "B"}:
         raise ValueError("Method must be A or B")
     return models[method].rank(models["collection"], query, top_k)
 
-
 def rank_queries(models, queries, method="B", top_k=None):
-    if len({query.id for query in queries}) != len(queries):
-        raise ValueError("Query identifiers must be unique")
+    if any(query.id <= 0 for query in queries) or len({query.id for query in queries}) != len(queries):
+        raise ValueError("Query identifiers must be unique and positive")
     return {query.id: rank_query(models, query.text, method, top_k) for query in queries}
-
 
 def load_external_queries(path, id_mode="source"):
     """Accept Cranfield records, qid<TAB>text, or one plain query per line."""
-    content = Path(path).read_text(encoding="utf-8")
-    if any(re.fullmatch(r"\s*\.I\s+\d+\s*", line) for line in content.splitlines()):
+    content = Path(path).read_text(encoding="utf-8-sig")
+    if any(re.match(r"^\s*\.I(?:\s|$)", line) for line in content.splitlines()):
         return read_queries(path, id_mode)
     queries, seen = [], set()
     for line_number, line in enumerate(content.splitlines(), 1):
@@ -58,7 +54,6 @@ def load_external_queries(path, id_mode="source"):
         raise ValueError("No external queries found")
     return queries
 
-
 def main():
     parser = argparse.ArgumentParser(description="Use the trained PA3 models on new queries")
     parser.add_argument("--weights", "--weights_file", default=str(ROOT / "results" / "weights.txt"))
@@ -73,6 +68,8 @@ def main():
     parser.add_argument("--output", required=True)
     parser.add_argument("--qrels", help="Optional Cranfield judgments for evaluating these queries")
     args = parser.parse_args()
+    if args.query_id <= 0:
+        parser.error("--query-id must be positive")
     args.method = {"zone": "A", "svm": "B"}.get(args.method, args.method)
     models = load_models(args.weights, args.documents)
     queries = ([Query(args.query_id, args.query_id, args.query)] if args.query is not None
@@ -90,7 +87,6 @@ def main():
         evaluations = {args.method: {"cutoff": cutoff, **evaluate(rankings, qrels)}}
         output.with_suffix(".evaluation.txt").write_text(evaluation_text(evaluations), encoding="utf-8")
     print(f"Ranked {len(queries)} queries with Method {args.method}; wrote {output}")
-
 
 if __name__ == "__main__":
     main()

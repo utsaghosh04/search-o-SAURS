@@ -1,4 +1,4 @@
-"""PA3 training/validation/test pipeline. Run: python src/train.py."""
+"""training/validation/test pipeline"""
 from dataclasses import asdict, replace
 from pathlib import Path
 from pprint import pformat
@@ -14,7 +14,6 @@ from zone_model import ZoneRanker, learn_zone_weights
 from svm_model import SVMRanker, fit_scaler, scale_rows, fit_linear_svm, candidate_mask
 from metrics import relevant_documents, evaluate, evaluation_text
 
-
 def split_queries(query_ids: list[int], seed: int) -> dict[str, list[int]]:
     if len(query_ids) < 5 or len(set(query_ids)) != len(query_ids):
         raise ValueError("Need at least five unique queries for a three-way split")
@@ -24,7 +23,6 @@ def split_queries(query_ids: list[int], seed: int) -> dict[str, list[int]]:
     return {"train": sorted(shuffled[:n_train]),
             "validation": sorted(shuffled[n_train:n_train + n_validation]),
             "test": sorted(shuffled[n_train + n_validation:])}
-
 
 def train_and_evaluate(data=DEFAULT_DATA, output=ROOT / "results", seed=42, grid_divisions=10,
                        zone_k=10, cutoffs=(5, 10, 15, 20, 30), c_values=(0.01, 0.1, 1.0),
@@ -117,7 +115,6 @@ def train_and_evaluate(data=DEFAULT_DATA, output=ROOT / "results", seed=42, grid
               f"macro metrics={evaluations[method]['macro']}", flush=True)
     return bundle, evaluations
 
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data", default=str(DEFAULT_DATA))
@@ -132,7 +129,6 @@ def main():
     parser.add_argument("--c-values", type=float, nargs="+", default=[0.01, 0.1, 1.0])
     args = parser.parse_args()
     train_and_evaluate(**vars(args))
-
 
 if __name__ == "__main__":
     main()

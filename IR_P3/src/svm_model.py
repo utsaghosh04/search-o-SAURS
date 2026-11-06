@@ -1,21 +1,18 @@
-"""Method B: train a linear SVM and reuse its 22 learned real-valued weights."""
+"""Method B: train a linear SVM and reuse its 22 learned real valued weights"""
 from dataclasses import dataclass
 import math
 import warnings
 from data import rank, tokenize
 from features import FEATURE_NAMES
 
-
 def candidate_mask(features, mode):
     if mode not in {"all", "matching"}:
         raise ValueError("Invalid SVM candidate policy")
     return None if mode == "all" else [row[1] > 0 for row in features]
 
-
 def svm_scores(rows, model):
     return [math.fsum(x * w for x, w in zip(row, model["weights"])) + model["intercept"]
             for row in rows]
-
 
 def fit_scaler(rows):
     if not rows or any(len(r) != len(FEATURE_NAMES) for r in rows):
@@ -28,13 +25,11 @@ def fit_scaler(rows):
         scales.append(math.sqrt(variance) if variance > 0 else 1.0)
     return means, scales
 
-
 def scale_rows(rows, means, scales):
     return [[(x - mean) / scale for x, mean, scale in zip(row, means, scales)] for row in rows]
 
-
 def fit_linear_svm(scaled_rows, labels, means, scales, c, seed):
-    """Fit a linear SVM and convert its coefficients to original feature units."""
+    """gitting a linear SVM and convert its coefficients to original feature units"""
     from sklearn.exceptions import ConvergenceWarning
     from sklearn.svm import LinearSVC
 
@@ -53,10 +48,9 @@ def fit_linear_svm(scaled_rows, labels, means, scales, c, seed):
             "standardized_intercept": float(solver.intercept_[0]),
             "training_means": means, "training_scales": scales}
 
-
 @dataclass
 class SVMRanker:
-    """Method B: original-feature-unit linear decision score w*x + intercept."""
+    """Method B: original feature unit linear decision score w*x + intercept"""
 
     weights: list[float]
     intercept: float
@@ -93,4 +87,3 @@ class SVMRanker:
             return []
         rows = collection.features(query)
         return rank(collection.ids, self.score_features(rows), k, candidate_mask(rows, self.candidates))
-

@@ -5,11 +5,9 @@ import math
 from data import rank, tokenize
 from metrics import evaluate
 
-
 def zone_scores(zones, weights):
     return [round(math.fsum(match * weight for match, weight in zip(zone, weights)), 12)
             for zone in zones]
-
 
 def weight_grid(divisions: int):
     if divisions < 1:
@@ -19,7 +17,6 @@ def weight_grid(divisions: int):
             for c in range(divisions - a - b + 1):
                 yield [a / divisions, b / divisions, c / divisions,
                        (divisions - a - b - c) / divisions]
-
 
 def learn_zone_weights(collection, zones, qrels, train_ids, divisions, k):
     boolean_patterns = list(product((0, 1), repeat=4))
@@ -47,7 +44,6 @@ def learn_zone_weights(collection, zones, qrels, train_ids, divisions, k):
             best_score, best_weights = training_score, weights[:]
     return best_weights, best_score
 
-
 @dataclass
 class ZoneRanker:
     """Method A: score(d,q) = sum of four learned Boolean zone weights."""
@@ -71,4 +67,3 @@ class ZoneRanker:
             return []
         scores = self.score(collection, query)
         return rank(collection.ids, scores, k, [s > 0 for s in scores])
-

@@ -1,4 +1,4 @@
-"""All 22 PA3 query-document features, computed using the standard library."""
+"""Query Document features, computed using the standard libraries"""
 from collections import Counter
 import math
 from data import tokenize
@@ -12,7 +12,6 @@ FEATURE_NAMES = (
     "boolean_model", "vector_space_model", "bm25",
 )
 
-
 def statistics(values) -> list[float]:
     if not values:
         return [0.0] * 5
@@ -20,7 +19,6 @@ def statistics(values) -> list[float]:
     mean = total / len(values)
     variance = math.fsum((v - mean) ** 2 for v in values) / len(values)
     return [total, min(values), max(values), mean, variance]
-
 
 class FeatureExtractor:
     def __init__(self, corpus):
@@ -55,4 +53,3 @@ class FeatureExtractor:
                         + statistics(tf) + statistics(normalized) + statistics(tf_idf)
                         + [float(matched == len(terms)), cosine, bm25])
         return rows
-

@@ -1,4 +1,4 @@
-"""Read Cranfield data and prepare the searchable collection."""
+"""For reading Cranfield data and prepare the searchable collection"""
 from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
@@ -10,7 +10,6 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_DATA = ROOT / "data" / "cran"
 FIELDS = ("title", "author", "bibliography", "body")
 
-
 @dataclass(frozen=True)
 class Document:
     id: int
@@ -19,23 +18,20 @@ class Document:
     bibliography: str = ""
     body: str = ""
 
-
 @dataclass(frozen=True)
 class Query:
     id: int
     source_id: int
     text: str
 
-
 def tokenize(text: str) -> list[str]:
     """Lowercase text and extract alphanumeric tokens."""
     return re.findall(r"[a-z0-9]+", text.lower())
 
-
 def read_records(path: str | Path) -> list[tuple[int, dict[str, str]]]:
     records, seen, fields = [], set(), {}
     record_id, field = None, None
-    for line in Path(path).read_text(encoding="utf-8").splitlines():
+    for line in Path(path).read_text(encoding="utf-8-sig").splitlines():
         marker = re.fullmatch(r"\.([A-Z])(?:\s+(.*))?", line.strip())
         if marker:
             tag, value = marker.groups()
@@ -64,18 +60,15 @@ def read_records(path: str | Path) -> list[tuple[int, dict[str, str]]]:
         raise ValueError(f"No records in {path}")
     return records
 
-
 def read_documents(path: str | Path) -> list[Document]:
     return [Document(i, *(f.get(tag, "") for tag in ("T", "A", "B", "W")))
             for i, f in read_records(path)]
-
 
 def read_queries(path: str | Path, id_mode: str = "ordinal") -> list[Query]:
     if id_mode not in {"ordinal", "source"}:
         raise ValueError("Query ID mode must be ordinal or source")
     return [Query(n if id_mode == "ordinal" else i, i, f.get("W", ""))
             for n, (i, f) in enumerate(read_records(path), 1)]
-
 
 def read_qrels(path: str | Path) -> dict[int, dict[int, int]]:
     result = {}
@@ -94,7 +87,6 @@ def read_qrels(path: str | Path) -> dict[int, dict[int, int]]:
     if not result:
         raise ValueError(f"No judgments in {path}")
     return result
-
 
 class CranfieldCorpus:
     def __init__(self, documents: list[Document], zone_match="any", stream="all"):
@@ -132,9 +124,6 @@ class CranfieldCorpus:
         from features import FeatureExtractor
         return FeatureExtractor(self).features(query)
 
-
-
-
 def rank(ids, scores, k, candidates=None) -> list[tuple[int, float]]:
     if k < 1:
         raise ValueError("Cutoff must be positive")
@@ -146,11 +135,9 @@ def rank(ids, scores, k, candidates=None) -> list[tuple[int, float]]:
     positions.sort(key=lambda i: (-scores[i], ids[i]))
     return [(ids[i], float(scores[i])) for i in positions[:k]]
 
-
 def write_run(path: Path, results: dict, tag: str):
     """TREC text: query_id Q0 document_id rank score run_tag; no header."""
     with path.open("w", encoding="utf-8", newline="\n") as stream:
         for qid, rows in sorted(results.items()):
             for n, (did, score) in enumerate(rows, 1):
                 stream.write(f"{qid} Q0 {did} {n} {score:.17g} {tag}\n")
-

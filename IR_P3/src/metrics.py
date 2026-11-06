@@ -1,10 +1,8 @@
-"""PA3 precision, recall and F1 for actual returned result lists."""
+"""precision, recall and F1 for actual returned result lists"""
 import math
-
 
 def relevant_documents(judgments: dict[int, int]) -> set[int]:
     return {did for did, grade in judgments.items() if grade in {1, 2, 3, 4}}
-
 
 def metrics(retrieved: list[int], relevant: set[int]) -> dict:
     if len(retrieved) != len(set(retrieved)):
@@ -15,7 +13,6 @@ def metrics(retrieved: list[int], relevant: set[int]) -> dict:
     f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0
     return {"precision": precision, "recall": recall, "f1": f1,
             "retrieved": len(retrieved), "relevant": len(relevant), "hits": hits}
-
 
 def evaluate(results: dict, qrels: dict) -> dict:
     if set(results) - set(qrels):
@@ -32,7 +29,6 @@ def evaluate(results: dict, qrels: dict) -> dict:
     return {"macro": macro, "micro": {"precision": precision, "recall": recall, "f1": f1},
             "per_query": per_query}
 
-
 def evaluation_text(evaluations):
     """Per-query and aggregate precision/recall/F1 in a readable text table."""
     lines = ["method\tquery_id\tcutoff\tprecision\trecall\tf1\thits\tretrieved\trelevant"]
@@ -47,4 +43,3 @@ def evaluation_text(evaluations):
             fields += [str(row[key]) for key in ("hits", "retrieved", "relevant")]
             lines.append("\t".join(fields))
     return "\n".join(lines) + "\n"
-

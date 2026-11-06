@@ -2,7 +2,7 @@
 
 This project implements the two ranking methods in PA3. The first learns how much weight to give a document's title, author, bibliography and body. The second learns a linear SVM over the 22 query-document features listed in the assignment.
 
-Both models produce ranked document lists. Their precision, recall and F1 are measured on queries kept out of training and parameter selection. The LaTeX report is available at `output/pdf/Report_PA3_search-o-SAURS.pdf`; its editable source is in `report/`.
+Both models produce ranked document lists. Their precision, recall and F1 are measured on queries kept out of training and parameter selection. The final report is `output/pdf/Report_PA3_search-o-SAURS.pdf`, and its standalone LaTeX source is `report/Report_PA3_search-o-SAURS.tex`. The figures are embedded as TikZ drawings, so no separate assets or font files are needed. The report includes the implementation overview, sample results, baseline study and instructions for running programs and queries.
 
 ## Getting started
 
@@ -64,9 +64,7 @@ src/
 data/cran/         Original collection, queries and judgments
 results/           Learned parameters, rankings and evaluation
 tests/
-  test_pipeline.py       Parsing, formulas, training and integration tests
-  test_model_outputs.py  Independent feature, score and output checks
-  run_tests.py           Run tests and optionally reproduce the experiment
+  run_tests.py     Parsing, features, models, validation, query audits and optional retraining
 ```
 
 The main result files are:
@@ -81,9 +79,10 @@ The main result files are:
 | `validation.txt` | The settings tried and their validation scores |
 | `test_queries.txt` | The held-out queries in Cranfield format |
 | `query_id_mapping.txt` | Query positions alongside their original `.I` IDs |
-| `test_results.txt` | The latest test report |
-| `output_verification.txt` | Independent score-error and ranking checks for each test query |
-| `retraining_test.txt` | Training log from the full reproduction check |
+| `cross_validation.txt` | Development-only baseline comparisons, folds, selected settings and uncertainty estimates |
+
+The test script recreates `test_results.txt`, `output_verification.txt`,
+`regression_audit.txt` and, with `--retrain`, `retraining_test.txt` on demand.
 
 Weights are plain Python literal data, read using `ast.literal_eval`. There is no JSON or binary model file. Ranking lines use `query_id Q0 document_id rank score run_tag`. Scores descend; equal scores use ascending document ID. Empty results have no ranking lines but remain in the evaluation table.
 
@@ -150,4 +149,31 @@ ln(1 + (N-df(t)+0.5)/(df(t)+0.5)) * tf(t,d)*(k1+1)
 
 Zero-length normalized TF and zero-norm cosine are zero. The SVM ranks all documents by default, so a nonempty unknown query can still receive length-dependent scores. `--svm-candidates matching` restricts it to lexical candidates.
 
-The programming requirements are implemented and tested under these definitions. The report covers the group details, problem statement, implementations, experiment plan, measured results and discussion required by PA3. See `report/BUILD.md` for compilation instructions.
+The programming requirements are implemented and tested under these definitions. The report covers the group details, problem statement, implementation, experiment plan and measured results, with analysis alongside the results.
+
+## Additional validation and input regression fixes
+
+External query files may use UTF-8 with or without a BOM. Both single-query and
+batch prediction require positive query IDs; malformed Cranfield IDs are rejected
+instead of being interpreted as plain queries.
+
+The original report describes the fixed 135/45/45 experiment. A supplemental
+study compares SVM with BM25 and TF-IDF cosine using three outer query folds on
+the 180 development queries, excluding the 45 test queries. An inner holdout
+selects SVM C and each method's cutoff independently; scaling is refitted using
+only the outer training queries. Cutoffs cover every integer from 1 to 30.
+Paired query bootstrap intervals and Holm-adjusted sign-flip tests accompany
+the comparisons. These development estimates are separate from held-out scores.
+
+```powershell
+python -B src/validate.py
+python -B tests/run_tests.py --retrain
+```
+
+The final report includes the measured comparisons, limits and input fixes.
+Raw folds, per-query metrics,
+selected settings and runtime versions are in `results/cross_validation.txt`.
+The study does not replace submission weights or held-out rankings.
+
+`tests/run_tests.py` is the only test script. It includes the query audit and
+writes both `results/test_results.txt` and `results/regression_audit.txt`.
